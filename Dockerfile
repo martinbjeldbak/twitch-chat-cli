@@ -3,7 +3,7 @@
 ##
 ## Build
 ##
-FROM golang:1.17-bullseye
+FROM golang:1.18-bullseye
 
 WORKDIR /go/src/twitch-chat-cli
 COPY *.go .
