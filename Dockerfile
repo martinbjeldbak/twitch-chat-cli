@@ -3,9 +3,9 @@
 ##
 ## Build
 ##
-FROM golang:1.17-bullseye as build
+FROM golang:1.17-bullseye
 
-WORKDIR /go/src/app
+WORKDIR /go/src/twitch-chat-cli
 COPY *.go .
 
 RUN go mod init
@@ -13,13 +13,6 @@ RUN go get -d -v ./...
 RUN go vet -v
 RUN go test -v
 
-RUN CGO_ENABLED=0 go build -o /go/bin/app
+RUN go build -o /go/bin/twitch-chat-cli
 
-##
-## Deploy
-##
-FROM gcr.io/distroless/base-debian11
-
-COPY --from=build /go/bin/app /
-
-CMD ["/app"]
+CMD ["/twitch-chat-cli"]

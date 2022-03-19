@@ -1,9 +1,6 @@
 version: '3'
 services:
   app:
-    build:
-      target: build
-
     volumes:
       # Mounts the project folder to '/workspace'. While this file is in .devcontainer,
       # mounts are relative to the first file in the list, which is a level up.
