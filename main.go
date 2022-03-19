@@ -1,33 +1,75 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"image/png"
+	"io"
+	"log"
 	"net/http"
 	"os"
+	"strings"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/gempir/go-twitch-irc/v3"
+	"github.com/mattn/go-sixel"
 )
 
+const cdnFmtString = "https://static-cdn.jtvnw.net/emoticons/v2/%v/%v/%v/%v"
+
+func emoteUrl(id string) string {
+	return fmt.Sprintf(cdnFmtString, id, "static", "dark", "3.0")
+}
+
 func main() {
+	client := twitch.NewAnonymousClient()
 
-	e := echo.New()
+	client.OnPrivateMessage(func(message twitch.PrivateMessage) {
+		msg := lipgloss.NewStyle().
+			Inline(true).
+			Bold(true).
+			Foreground(lipgloss.Color(message.User.Color)).
+			Render(message.User.DisplayName)
 
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+		msg += fmt.Sprintf(": %v", message.Message)
 
-	e.GET("/", func(c echo.Context) error {
-		e.StdLogger.Println("hello world!")
-		return c.HTML(http.StatusOK, "Hello, Docker! <3")
+		if len(message.Emotes) > 0 {
+			emoteUrl := emoteUrl(message.Emotes[0].ID)
+
+			resp, err := http.Get(emoteUrl)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer resp.Body.Close()
+
+			emoteImageData, err := io.ReadAll(resp.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			img, err := png.Decode(strings.NewReader(string(emoteImageData)))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			var buf bytes.Buffer
+			err = sixel.NewEncoder(os.Stdout).Encode(img)
+			if err != nil {
+				log.Fatal(err)
+			}
+			bs := buf.Bytes()
+			//fmt.Println(bs)
+
+			msg += fmt.Sprintf(", emotes: %v", bs)
+		}
+
+		fmt.Println(msg)
 	})
 
-	e.GET("/ping", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, struct{ Status string }{Status: "OK"})
-	})
+	client.Join("nmplol")
 
-	httpPort := os.Getenv("HTTP_PORT")
-	if httpPort == "" {
-		httpPort = "8080"
+	err := client.Connect()
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	e.Logger.Fatal(e.Start(":" + httpPort))
 }
