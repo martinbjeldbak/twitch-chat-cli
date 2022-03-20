@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"image/png"
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -18,7 +16,7 @@ import (
 const cdnFmtString = "https://static-cdn.jtvnw.net/emoticons/v2/%v/%v/%v/%v"
 
 func emoteUrl(id string) string {
-	return fmt.Sprintf(cdnFmtString, id, "static", "dark", "3.0")
+	return fmt.Sprintf(cdnFmtString, id, "static", "dark", "1.0")
 }
 
 func main() {
@@ -33,8 +31,8 @@ func main() {
 
 		msg += fmt.Sprintf(": %v", message.Message)
 
-		if len(message.Emotes) > 0 {
-			emoteUrl := emoteUrl(message.Emotes[0].ID)
+		for i, emote := range message.Emotes {
+			emoteUrl := emoteUrl(emote.ID)
 
 			resp, err := http.Get(emoteUrl)
 			if err != nil {
@@ -52,21 +50,23 @@ func main() {
 				log.Fatal(err)
 			}
 
-			var buf bytes.Buffer
-			err = sixel.NewEncoder(os.Stdout).Encode(img)
+			var buf strings.Builder
+			err = sixel.NewEncoder(&buf).Encode(img)
 			if err != nil {
 				log.Fatal(err)
 			}
-			bs := buf.Bytes()
-			//fmt.Println(bs)
 
-			msg += fmt.Sprintf(", emotes: %v", bs)
+			//msg = strings.ReplaceAll(msg, emote.Name, buf.String())
+			emoteString := buf.String()
+			msg += fmt.Sprintf(" (emote #%v: %v)", i+1, emoteString)
 		}
 
 		fmt.Println(msg)
 	})
 
-	client.Join("nmplol")
+	client.Join("esfandtv")
+
+	fmt.Println("Started...")
 
 	err := client.Connect()
 	if err != nil {

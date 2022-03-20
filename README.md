@@ -23,7 +23,9 @@ Built With
 - Authentication
 - Chat
 - Goreleaser https://goreleaser.com/intro/
-- Add to list https://github.com/charmbracelet/bubbletea#bubble-tea-in-the-wild
+- Add to lists
+  - https://github.com/charmbracelet/bubbletea#bubble-tea-in-the-wild
+  - https://github.com/rothgar/awesome-tuis
 - Add vyper for config files https://github.com/spf13/viper
 - BTTW emote support via https://github.com/pajlada/gobttv (see usage https://github.com/pajbot/pajbot2/search?q=gobttv)
 - Add emote cache https://github.com/charmbracelet/charm/tree/main/kv
