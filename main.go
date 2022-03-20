@@ -58,7 +58,6 @@ func main() {
 			// }
 
 			// TRY #2 with rasterm
-			// err = sixel.NewEncoder(&buf).Encode(img)
 			rts := rasterm.Settings{EscapeTmux: false}
 			err = rts.ItermWriteImage(&buf, img)
 			if err != nil {
@@ -66,6 +65,7 @@ func main() {
 			}
 
 			msg = strings.ReplaceAll(msg, emote.Name, buf.String())
+			// If debugging:
 			msg += fmt.Sprintf(" (#%v: %v -> %v)", i+1, emote.Name, buf.String())
 		}
 
@@ -74,9 +74,14 @@ func main() {
 
 	client.Join("esfandtv")
 
-	fmt.Println("Started...")
+	sixelCapable, err := rasterm.IsSixelCapable()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	err := client.Connect()
+	fmt.Printf("Started... (iTerm: %v, sixel: %v, tmux: %v, kitty: %v)\n", rasterm.IsTermItermWez(), sixelCapable, rasterm.IsTmuxScreen(), rasterm.IsTermKitty())
+
+	err = client.Connect()
 	if err != nil {
 		log.Fatal(err)
 	}

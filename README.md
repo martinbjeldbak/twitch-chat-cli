@@ -23,6 +23,7 @@ Built With
 - Authentication
 - Chat
 - Goreleaser https://goreleaser.com/intro/
+- Animated emotes (image/gif?)
 - Add to lists
   - https://github.com/charmbracelet/bubbletea#bubble-tea-in-the-wild
   - https://github.com/rothgar/awesome-tuis
