@@ -5,6 +5,7 @@ go 1.18
 require github.com/labstack/echo/v4 v4.7.0
 
 require (
+	github.com/BourgeoisBear/rasterm v1.0.3 // indirect
 	github.com/DataDog/zstd v1.4.1 // indirect
 	github.com/caarlos0/env/v6 v6.9.1 // indirect
 	github.com/calmh/randomart v1.1.0 // indirect

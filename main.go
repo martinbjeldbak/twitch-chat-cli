@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/BourgeoisBear/rasterm"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/gempir/go-twitch-irc/v3"
-	"github.com/mattn/go-sixel"
 )
 
 const cdnFmtString = "https://static-cdn.jtvnw.net/emoticons/v2/%v/%v/%v/%v"
@@ -51,14 +51,22 @@ func main() {
 			}
 
 			var buf strings.Builder
-			err = sixel.NewEncoder(&buf).Encode(img)
+			// TRY #1 with sixel-go
+			// err = sixel.NewEncoder(&buf).Encode(img)
+			// if err != nil {
+			// 	log.Fatal(err)
+			// }
+
+			// TRY #2 with rasterm
+			// err = sixel.NewEncoder(&buf).Encode(img)
+			rts := rasterm.Settings{EscapeTmux: false}
+			err = rts.ItermWriteImage(&buf, img)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			//msg = strings.ReplaceAll(msg, emote.Name, buf.String())
-			emoteString := buf.String()
-			msg += fmt.Sprintf(" (emote #%v: %v)", i+1, emoteString)
+			msg = strings.ReplaceAll(msg, emote.Name, buf.String())
+			msg += fmt.Sprintf(" (#%v: %v -> %v)", i+1, emote.Name, buf.String())
 		}
 
 		fmt.Println(msg)
