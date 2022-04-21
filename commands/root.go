@@ -1,8 +1,4 @@
-/*
-Copyright © 2022 Martin Bjeldbak Madsen me@martinbjeldbak.com
-
-*/
-package cmd
+package commands
 
 import (
 	"fmt"
