@@ -11,6 +11,7 @@ Built With
 
 ## Inspiration
 - https://github.com/atye/ttchat, similar principle, 1 channel only and need dev account
+- https://github.com/dlvhdr/gh-dash - beautiful TUI
 
 ## Docs
 - https://dev.twitch.tv/docs/cli
@@ -31,4 +32,9 @@ Built With
 - BTTW emote support via https://github.com/pajlada/gobttv (see usage https://github.com/pajbot/pajbot2/search?q=gobttv)
 - Add emote cache https://github.com/charmbracelet/charm/tree/main/kv
 - User profile pages + mentions
-- NIcer text wrapping (indentet length of user name)
+- Nicer text wrapping (indentet length of user name)
+- Add info about terminal emote support (kitty / iterm2 / sixel)
+  - https://github.com/alacritty/alacritty (soon)
+    - soon https://github.com/alacritty/alacritty/pull/4763, https://github.com/alacritty/alacritty/issues/910
+  - Windows Terminal does not support emotes
+
