@@ -2,87 +2,100 @@ package main
 
 import (
 	"fmt"
-	"image/png"
-	"io"
-	"log"
-	"net/http"
-	"strings"
+	"os"
 
-	"github.com/BourgeoisBear/rasterm"
-	"github.com/charmbracelet/lipgloss"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/gempir/go-twitch-irc/v3"
 )
 
-const cdnFmtString = "https://static-cdn.jtvnw.net/emoticons/v2/%v/%v/%v/%v"
+type MessageMsg struct {
+	message string
+}
 
-func emoteUrl(id string) string {
-	return fmt.Sprintf(cdnFmtString, id, "static", "dark", "1.0")
+type model struct {
+	messages chan MessageMsg // where we will get messages
+	ms       []MessageMsg
+	err      error
+}
+
+func (m model) Init() tea.Cmd {
+	return tea.Batch(
+		connectTwitch(m.messages),  // generate messages
+		waitForMessage(m.messages), // wait for a message
+	)
+}
+
+type errMsg struct{ err error }
+
+func (e errMsg) Error() string { return e.err.Error() }
+
+func waitForMessage(sub chan MessageMsg) tea.Cmd {
+	return func() tea.Msg {
+		return MessageMsg(<-sub)
+	}
+}
+
+func connectTwitch(sub chan MessageMsg) tea.Cmd {
+	return func() tea.Msg {
+		client := twitch.NewAnonymousClient()
+
+		client.OnPrivateMessage(func(m twitch.PrivateMessage) {
+			sub <- MessageMsg{message: m.Message}
+		})
+
+		client.Join("nmplol")
+		err := client.Connect()
+
+		if err != nil {
+			return errMsg{err}
+		}
+		return nil
+	}
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if k := msg.String(); k == "ctrl+c" || k == "q" || k == "esc" {
+			return m, tea.Quit
+		}
+	case MessageMsg:
+		m.ms = append(m.ms, msg)
+		return m, waitForMessage(m.messages)
+	case errMsg:
+		m.err = msg
+		return m, tea.Quit
+	}
+
+	return m, nil
+}
+
+func (m model) View() string {
+	if m.err != nil {
+		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
+	}
+
+	s := "Messages:\n"
+	for _, msg := range m.ms {
+		s += fmt.Sprintf("\n%v", msg.message)
+	}
+
+	s += "\n"
+
+	// Send to UI for rendering
+	return s
 }
 
 func main() {
-	client := twitch.NewAnonymousClient()
+	p := tea.NewProgram(model{
+		messages: make(chan MessageMsg),
+		ms:       make([]MessageMsg, 0),
+	},
+		tea.WithAltScreen(),
+		tea.WithMouseCellMotion())
 
-	client.OnPrivateMessage(func(message twitch.PrivateMessage) {
-		msg := lipgloss.NewStyle().
-			Inline(true).
-			Bold(true).
-			Foreground(lipgloss.Color(message.User.Color)).
-			Render(message.User.DisplayName)
-
-		msg += fmt.Sprintf(": %v", message.Message)
-
-		for i, emote := range message.Emotes {
-			emoteUrl := emoteUrl(emote.ID)
-
-			resp, err := http.Get(emoteUrl)
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer resp.Body.Close()
-
-			emoteImageData, err := io.ReadAll(resp.Body)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			img, err := png.Decode(strings.NewReader(string(emoteImageData)))
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			var buf strings.Builder
-			// TRY #1 with sixel-go
-			// err = sixel.NewEncoder(&buf).Encode(img)
-			// if err != nil {
-			// 	log.Fatal(err)
-			// }
-
-			// TRY #2 with rasterm
-			rts := rasterm.Settings{EscapeTmux: false}
-			err = rts.ItermWriteImage(&buf, img)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			msg = strings.ReplaceAll(msg, emote.Name, buf.String())
-			// If debugging:
-			msg += fmt.Sprintf(" (#%v: %v -> %v)", i+1, emote.Name, buf.String())
-		}
-
-		fmt.Println(msg)
-	})
-
-	client.Join("esfandtv")
-
-	sixelCapable, err := rasterm.IsSixelCapable()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("Started... (iTerm: %v, sixel: %v, tmux: %v, kitty: %v)\n", rasterm.IsTermItermWez(), sixelCapable, rasterm.IsTmuxScreen(), rasterm.IsTermKitty())
-
-	err = client.Connect()
-	if err != nil {
-		log.Fatal(err)
+	if err := p.Start(); err != nil {
+		fmt.Printf("Uh oh, there was an error: %v\n", err)
+		os.Exit(1)
 	}
 }
