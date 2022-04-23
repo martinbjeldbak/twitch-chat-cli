@@ -7,14 +7,14 @@ import (
 	"github.com/gempir/go-twitch-irc/v3"
 )
 
-type MessageMsg struct {
+type message struct {
 	message string
 }
 
 type channel struct {
 	name             string
-	messageChannel   chan MessageMsg // where we will get messages
-	messagesToRender []MessageMsg
+	messageChannel   chan message // where we will get messages
+	messagesToRender []message
 }
 
 type twitchChannelInfos map[string]*channel
@@ -27,20 +27,21 @@ type model struct {
 
 type channelMessageMsg struct {
 	name    string
-	message MessageMsg
+	message message
 }
 
 func (m model) Init() tea.Cmd {
-	var cmds []tea.Cmd
-	for _, c := range m.channels {
-		cmds = append(cmds, waitForMessage(c))
+	var initCmds []tea.Cmd
+
+	// Connect to desired twitch channels
+	initCmds = append(initCmds, connectTwitch(m.channels))
+
+	// Emit Tea messages for each new Twitch message
+	for _, channel := range m.channels {
+		initCmds = append(initCmds, waitForMessage(channel))
 	}
 
-	cmds = append(cmds, connectTwitch(m.channels))
-
-	return tea.Batch(
-		cmds..., // output messages
-	)
+	return tea.Batch(initCmds...)
 }
 
 type errMsg struct{ err error }
@@ -58,10 +59,7 @@ func connectTwitch(ci twitchChannelInfos) tea.Cmd {
 		client := twitch.NewAnonymousClient()
 
 		client.OnPrivateMessage(func(m twitch.PrivateMessage) {
-			if entry, ok := ci[m.Channel]; ok {
-				entry.messageChannel <- MessageMsg{message: m.Message}
-				ci[m.Channel] = entry
-			}
+			ci[m.Channel].messageChannel <- message{message: m.Message}
 		})
 
 		channelNames := make([]string, 0, len(ci))
@@ -69,11 +67,11 @@ func connectTwitch(ci twitchChannelInfos) tea.Cmd {
 			channelNames = append(channelNames, k)
 		}
 		client.Join(channelNames...)
-		err := client.Connect()
 
-		if err != nil {
+		if err := client.Connect(); err != nil {
 			return errMsg{err}
 		}
+
 		return nil
 	}
 }
@@ -103,8 +101,8 @@ func (m model) View() string {
 		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
 	}
 
-	s := fmt.Sprintf("Messages for channel %v:\n", m.channels["pgl"].name)
-	for _, msg := range m.channels["pgl"].messagesToRender {
+	s := fmt.Sprintf("Messages for channel %v:\n", m.channels["nmplol"].name)
+	for _, msg := range m.channels["nmplol"].messagesToRender {
 		s += fmt.Sprintf("\n%v", msg.message)
 	}
 
@@ -117,7 +115,7 @@ func (m model) View() string {
 func Start(channels []string) error {
 	channelInfo := make(twitchChannelInfos)
 	for _, c := range channels {
-		channelInfo[c] = &channel{name: c, messageChannel: make(chan MessageMsg)}
+		channelInfo[c] = &channel{name: c, messageChannel: make(chan message)}
 	}
 
 	p := tea.NewProgram(model{
