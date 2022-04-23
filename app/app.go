@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/gempir/go-twitch-irc/v3"
@@ -24,12 +25,14 @@ type twitchChannel struct {
 	name             string
 	messageChannel   chan twitchMessage // where we will get messages
 	messagesToRender []twitchMessage
+	textInput        textinput.Model
 }
 
 type twitchChannelInfos map[string]*twitchChannel
 
 type model struct {
-	channels twitchChannelInfos
+	channels        twitchChannelInfos
+	activeTextInput *textinput.Model
 
 	err error
 }
@@ -49,6 +52,8 @@ func (m model) Init() tea.Cmd {
 	for _, channel := range m.channels {
 		initCmds = append(initCmds, waitForMessage(channel))
 	}
+
+	initCmds = append(initCmds, textinput.Blink)
 
 	return tea.Batch(initCmds...)
 }
@@ -94,23 +99,29 @@ func connectTwitch(ci twitchChannelInfos) tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if k := msg.String(); k == "ctrl+c" || k == "q" || k == "esc" {
+		if k := msg.String(); k == "ctrl+c" || k == "esc" {
 			return m, tea.Quit
 		}
+
 	case channelMessageMsg:
-		channel, ok := m.channels[msg.name]
-		if ok {
+		if channel, ok := m.channels[msg.name]; ok {
 			channel.messagesToRender = append(channel.messagesToRender, msg.message)
 			return m, waitForMessage(channel)
 		}
+
 	case errMsg:
 		m.err = msg
 		return m, tea.Quit
 	}
 
-	return m, nil
+	ti, cmd := m.activeTextInput.Update(msg)
+	m.activeTextInput = &ti
+
+	return m, cmd
 }
 
 func (m model) View() string {
@@ -118,8 +129,10 @@ func (m model) View() string {
 		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
 	}
 
-	s := fmt.Sprintf("Messages for channel %v:\n", m.channels["nmplol"].name)
-	for _, msg := range m.channels["nmplol"].messagesToRender {
+	curChannel := "nmplol"
+
+	s := fmt.Sprintf("Messages for channel %v:\n", m.channels[curChannel].name)
+	for _, msg := range m.channels[curChannel].messagesToRender {
 		userMsg := lipgloss.NewStyle().
 			Inline(true).
 			Bold(true).
@@ -131,6 +144,7 @@ func (m model) View() string {
 		s += userMsg
 	}
 
+	s += fmt.Sprintf("%s", m.activeTextInput.View())
 	s += "\n"
 
 	// Send to UI for rendering
@@ -140,11 +154,18 @@ func (m model) View() string {
 func Start(channels []string) error {
 	channelInfo := make(twitchChannelInfos)
 	for _, c := range channels {
-		channelInfo[c] = &twitchChannel{name: c, messageChannel: make(chan twitchMessage)}
+		ti := textinput.New()
+		ti.Placeholder = "Send a message"
+		ti.Focus()
+		ti.CharLimit = 156
+		ti.Width = 20
+
+		channelInfo[c] = &twitchChannel{name: c, messageChannel: make(chan twitchMessage), textInput: ti}
 	}
 
 	p := tea.NewProgram(model{
-		channels: channelInfo,
+		channels:        channelInfo,
+		activeTextInput: &channelInfo[channels[0]].textInput,
 	},
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion())
