@@ -4,20 +4,29 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/gempir/go-twitch-irc/v3"
 )
 
-type message struct {
+type user struct {
+	Name        string
+	DisplayName string
+	Color       string
+	Badges      map[string]int // TODO: consider model for this
+}
+
+type twitchMessage struct {
 	message string
+	user    user
 }
 
-type channel struct {
+type twitchChannel struct {
 	name             string
-	messageChannel   chan message // where we will get messages
-	messagesToRender []message
+	messageChannel   chan twitchMessage // where we will get messages
+	messagesToRender []twitchMessage
 }
 
-type twitchChannelInfos map[string]*channel
+type twitchChannelInfos map[string]*twitchChannel
 
 type model struct {
 	channels twitchChannelInfos
@@ -27,7 +36,7 @@ type model struct {
 
 type channelMessageMsg struct {
 	name    string
-	message message
+	message twitchMessage
 }
 
 func (m model) Init() tea.Cmd {
@@ -48,7 +57,7 @@ type errMsg struct{ err error }
 
 func (e errMsg) Error() string { return e.err.Error() }
 
-func waitForMessage(c *channel) tea.Cmd {
+func waitForMessage(c *twitchChannel) tea.Cmd {
 	return func() tea.Msg {
 		return channelMessageMsg{name: c.name, message: <-c.messageChannel}
 	}
@@ -59,7 +68,15 @@ func connectTwitch(ci twitchChannelInfos) tea.Cmd {
 		client := twitch.NewAnonymousClient()
 
 		client.OnPrivateMessage(func(m twitch.PrivateMessage) {
-			ci[m.Channel].messageChannel <- message{message: m.Message}
+			ci[m.Channel].messageChannel <- twitchMessage{
+				message: m.Message,
+				user: user{
+					Name:        m.User.Name,
+					DisplayName: m.User.DisplayName,
+					Color:       m.User.Color,
+					Badges:      m.User.Badges,
+				},
+			}
 		})
 
 		channelNames := make([]string, 0, len(ci))
@@ -103,7 +120,15 @@ func (m model) View() string {
 
 	s := fmt.Sprintf("Messages for channel %v:\n", m.channels["nmplol"].name)
 	for _, msg := range m.channels["nmplol"].messagesToRender {
-		s += fmt.Sprintf("\n%v", msg.message)
+		userMsg := lipgloss.NewStyle().
+			Inline(true).
+			Bold(true).
+			Foreground(lipgloss.Color(msg.user.Color)).
+			Render(msg.user.DisplayName)
+
+		userMsg += fmt.Sprintf(": %v\n", msg.message)
+
+		s += userMsg
 	}
 
 	s += "\n"
@@ -115,7 +140,7 @@ func (m model) View() string {
 func Start(channels []string) error {
 	channelInfo := make(twitchChannelInfos)
 	for _, c := range channels {
-		channelInfo[c] = &channel{name: c, messageChannel: make(chan message)}
+		channelInfo[c] = &twitchChannel{name: c, messageChannel: make(chan twitchMessage)}
 	}
 
 	p := tea.NewProgram(model{

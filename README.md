@@ -37,4 +37,4 @@ Built With
   - https://github.com/alacritty/alacritty (soon)
     - soon https://github.com/alacritty/alacritty/pull/4763, https://github.com/alacritty/alacritty/issues/910
   - Windows Terminal does not support emotes
-
+- `PM` and `WhisperMessage` support. See https://pkg.go.dev/github.com/gempir/go-twitch-irc/v3@v3.0.0#readme-available-data
