@@ -31,8 +31,8 @@ jobs:
       matrix:
         os: [ubuntu, macOS]
         go: [17, 18]
-    name: '${{ matrix.platform }} | 1.${{ matrix.go }}.x'
-    runs-on: ${{ matrix.platform }}-latest
+    name: '${{ matrix.os }} | 1.${{ matrix.go }}.x'
+    runs-on: ${{ matrix.os }}-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
