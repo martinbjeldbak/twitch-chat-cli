@@ -10,7 +10,8 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}",
-      "args": ["--config", "example.yaml"]
+      "args": ["--config", "example.yaml"],
+      "console": "integratedTerminal"
     }
   ]
 }
