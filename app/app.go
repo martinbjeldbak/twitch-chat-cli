@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -31,6 +32,7 @@ type twitchChannel struct {
 type twitchChannelInfos map[string]*twitchChannel
 
 type model struct {
+	currentChannel  *twitchChannel
 	channels        twitchChannelInfos
 	activeTextInput *textinput.Model
 
@@ -129,10 +131,8 @@ func (m model) View() string {
 		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
 	}
 
-	curChannel := "nmplol"
-
-	s := fmt.Sprintf("Messages for channel %v:\n", m.channels[curChannel].name)
-	for _, msg := range m.channels[curChannel].messagesToRender {
+	s := fmt.Sprintf("Messages for channel %v:\n", m.currentChannel.name)
+	for _, msg := range m.currentChannel.messagesToRender {
 		userMsg := lipgloss.NewStyle().
 			Inline(true).
 			Bold(true).
@@ -152,6 +152,10 @@ func (m model) View() string {
 }
 
 func Start(channels []string) error {
+	if len(channels) == 0 {
+		return errors.New("unable to load any channels, check config")
+	}
+
 	channelInfo := make(twitchChannelInfos)
 	for _, c := range channels {
 		ti := textinput.New()
@@ -164,6 +168,7 @@ func Start(channels []string) error {
 	}
 
 	p := tea.NewProgram(model{
+		currentChannel:  channelInfo[channels[0]],
 		channels:        channelInfo,
 		activeTextInput: &channelInfo[channels[0]].textInput,
 	},
