@@ -41,11 +41,11 @@ jobs:
         with:
           go-version: '>=1.{{ matrix.go }}.0'
 
-      - uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-1.${{ matrix.go }}.x-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-1.${{ matrix.go }}.x-
+      # - uses: actions/cache@v3
+      #   with:
+      #     path: ~/go/pkg/mod
+      #     key: ${{ runner.os }}-1.${{ matrix.go }}.x-${{ hashFiles('**/go.sum') }}
+      #     restore-keys: ${{ runner.os }}-1.${{ matrix.go }}.x-
 
       - run: go test -v
 
