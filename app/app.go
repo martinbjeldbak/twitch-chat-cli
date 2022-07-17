@@ -32,9 +32,8 @@ type twitchChannel struct {
 type twitchChannelInfos map[string]*twitchChannel
 
 type model struct {
-	currentChannel  *twitchChannel
-	channels        twitchChannelInfos
-	activeTextInput *textinput.Model
+	currentChannel *twitchChannel
+	channels       twitchChannelInfos
 
 	err error
 }
@@ -105,12 +104,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if k := msg.String(); k == "ctrl+c" || k == "esc" {
+		switch msg.String() {
+		case "ctrl+c", "esc":
 			return m, tea.Quit
+		case "up":
+			m.currentChannel = m.channels[m.currentChannel.name]
 		}
 
 	case channelMessageMsg:
 		if channel, ok := m.channels[msg.name]; ok {
+			// Throw away old messages to improve performance
+			if len(channel.messagesToRender) > 1000 { // TODO: paramterise this
+				channel.messagesToRender = channel.messagesToRender[50:]
+			}
+
 			channel.messagesToRender = append(channel.messagesToRender, msg.message)
 			return m, waitForMessage(channel)
 		}
@@ -120,8 +127,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	ti, cmd := m.activeTextInput.Update(msg)
-	m.activeTextInput = &ti
+	m.currentChannel.textInput, cmd = m.currentChannel.textInput.Update(msg)
 
 	return m, cmd
 }
@@ -131,7 +137,7 @@ func (m model) View() string {
 		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
 	}
 
-	s := fmt.Sprintf("Messages for channel %v:\n", m.currentChannel.name)
+	s := ""
 	for _, msg := range m.currentChannel.messagesToRender {
 		userMsg := lipgloss.NewStyle().
 			Inline(true).
@@ -144,7 +150,7 @@ func (m model) View() string {
 		s += userMsg
 	}
 
-	s += fmt.Sprintf("%s", m.activeTextInput.View())
+	s += fmt.Sprintf("%s", m.currentChannel.textInput.View())
 	s += "\n"
 
 	// Send to UI for rendering
@@ -159,7 +165,7 @@ func Start(channels []string) error {
 	channelInfo := make(twitchChannelInfos)
 	for _, c := range channels {
 		ti := textinput.New()
-		ti.Placeholder = "Send a message"
+		ti.Placeholder = fmt.Sprintf("Send a message in %v", c)
 		ti.Focus()
 		ti.CharLimit = 156
 		ti.Width = 20
@@ -168,9 +174,8 @@ func Start(channels []string) error {
 	}
 
 	p := tea.NewProgram(model{
-		currentChannel:  channelInfo[channels[0]],
-		channels:        channelInfo,
-		activeTextInput: &channelInfo[channels[0]].textInput,
+		currentChannel: channelInfo[channels[0]],
+		channels:       channelInfo,
 	},
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion())
