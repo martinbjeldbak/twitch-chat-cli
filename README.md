@@ -1,7 +1,12 @@
 # Twitch Chat CLI
+[Twitch.tv](https://twitch.tv) chat client in your terminal
+
 TODO: Add latest erlease here
 
-Chat in Twitch chat channels via your terminal.
+## Demo
+
+## Features
+
 
 Goal is to be simmiler to [Chatterino](https://chatterino.com/), but for CLI use
 
@@ -10,6 +15,7 @@ Built With
 - bubbletea
 
 ## Inspiration
+- https://github.com/chatterino/chatterino2 - Chatterino
 - https://github.com/atye/ttchat, similar principle, 1 channel only and need dev account
 - https://github.com/dlvhdr/gh-dash - beautiful TUI
 
