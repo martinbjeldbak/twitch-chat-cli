@@ -8,6 +8,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/gempir/go-twitch-irc/v3"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type user struct {
@@ -32,8 +34,10 @@ type twitchChannel struct {
 type twitchChannelInfos map[string]*twitchChannel
 
 type model struct {
+	client         *twitch.Client
 	currentChannel *twitchChannel
 	channels       twitchChannelInfos
+	logger         *zap.SugaredLogger
 
 	err error
 }
@@ -47,7 +51,7 @@ func (m model) Init() tea.Cmd {
 	var initCmds []tea.Cmd
 
 	// Connect to desired twitch channels
-	initCmds = append(initCmds, connectTwitch(m.channels))
+	initCmds = append(initCmds, connectTwitch(m.client, m.channels))
 
 	// Emit Tea messages for each new Twitch message
 	for _, channel := range m.channels {
@@ -69,10 +73,8 @@ func waitForMessage(c *twitchChannel) tea.Cmd {
 	}
 }
 
-func connectTwitch(ci twitchChannelInfos) tea.Cmd {
+func connectTwitch(client *twitch.Client, ci twitchChannelInfos) tea.Cmd {
 	return func() tea.Msg {
-		client := twitch.NewAnonymousClient()
-
 		client.OnPrivateMessage(func(m twitch.PrivateMessage) {
 			ci[m.Channel].messageChannel <- twitchMessage{
 				message: m.Message,
@@ -102,13 +104,22 @@ func connectTwitch(ci twitchChannelInfos) tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
+	// m.logger.Debugf("Got message %v\n", msg)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "esc":
 			return m, tea.Quit
 		case "up":
-			m.currentChannel = m.channels[m.currentChannel.name]
+			m.currentChannel = m.channels[m.currentChannel.name] // TODO: fix change channel
+		case "enter":
+			m.logger.Infof("Enter pressed, attempting to say '%v' in %v", m.currentChannel.textInput.Value(), m.currentChannel.name)
+			m.client.Say(m.currentChannel.name, m.currentChannel.textInput.Value())
+
+			m.currentChannel.textInput = textinput.New()
+		default:
+			m.currentChannel.textInput, cmd = m.currentChannel.textInput.Update(msg)
 		}
 
 	case channelMessageMsg:
@@ -127,13 +138,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	m.currentChannel.textInput, cmd = m.currentChannel.textInput.Update(msg)
-
 	return m, cmd
 }
 
 func (m model) View() string {
 	if m.err != nil {
+		m.logger.Debugf("We had some trouble: %v\n", m.err)
+
 		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
 	}
 
@@ -157,7 +168,19 @@ func (m model) View() string {
 	return s
 }
 
-func Start(channels []string) error {
+func Start(channels []string, loglevel int) error {
+	cfg := zap.NewProductionConfig()
+	cfg.OutputPaths = []string{
+		"log.log",
+	}
+	cfg.Development = true
+	cfg.Level.SetLevel(zapcore.Level(loglevel))
+
+	logger, _ := cfg.Build()
+
+	defer logger.Sync() // flushes buffer, if any
+	sugar := logger.Sugar()
+
 	if len(channels) == 0 {
 		return errors.New("unable to load any channels, check config")
 	}
@@ -173,9 +196,12 @@ func Start(channels []string) error {
 		channelInfo[c] = &twitchChannel{name: c, messageChannel: make(chan twitchMessage), textInput: ti}
 	}
 
+	c := twitch.NewClient("x", "oauth:y")
 	p := tea.NewProgram(model{
 		currentChannel: channelInfo[channels[0]],
 		channels:       channelInfo,
+		logger:         sugar,
+		client:         c,
 	},
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion())

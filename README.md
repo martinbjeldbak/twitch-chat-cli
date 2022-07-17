@@ -27,7 +27,7 @@ Built With
 
 
 ## TODO
-- Authentication
+- Authentication (temporarily via https://twitchapps.com/tmi/)
 - Chat
 - Goreleaser https://goreleaser.com/intro/
 - Animated emotes (image/gif?)

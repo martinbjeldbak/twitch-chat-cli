@@ -1,5 +1,12 @@
 ---
+username: martinbjeldbak
+token: asdf
+loglevel: -1 # https://pkg.go.dev/go.uber.org/zap@v1.21.0/zapcore#Level
 channels:
-  - pestily
-  - summit1g
-  - xqc
+  - jakenbakelive
+  - twitch
+  # - hasanabi
+  # - esl_csgo
+  # - pestily
+  # - summit1g
+  # - xqc
