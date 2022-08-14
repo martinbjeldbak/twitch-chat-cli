@@ -73,19 +73,23 @@ func waitForMessage(c *twitchChannel) tea.Cmd {
 	}
 }
 
+func handleChatMessage(client *twitch.Client, ci twitchChannelInfos) func(m twitch.PrivateMessage) {
+	return func(m twitch.PrivateMessage) {
+		ci[m.Channel].messageChannel <- twitchMessage{
+			message: m.Message,
+			user: user{
+				Name:        m.User.Name,
+				DisplayName: m.User.DisplayName,
+				Color:       m.User.Color,
+				Badges:      m.User.Badges,
+			},
+		}
+	}
+}
+
 func connectTwitch(client *twitch.Client, ci twitchChannelInfos) tea.Cmd {
 	return func() tea.Msg {
-		client.OnPrivateMessage(func(m twitch.PrivateMessage) {
-			ci[m.Channel].messageChannel <- twitchMessage{
-				message: m.Message,
-				user: user{
-					Name:        m.User.Name,
-					DisplayName: m.User.DisplayName,
-					Color:       m.User.Color,
-					Badges:      m.User.Badges,
-				},
-			}
-		})
+		client.OnPrivateMessage(handleChatMessage(client, ci))
 
 		channelNames := make([]string, 0, len(ci))
 		for k := range ci {
@@ -114,10 +118,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "up":
 			m.currentChannel = m.channels[m.currentChannel.name] // TODO: fix change channel
 		case "enter":
-			m.logger.Infof("Enter pressed, attempting to say '%v' in %v", m.currentChannel.textInput.Value(), m.currentChannel.name)
+			m.logger.Infof("Saying '%v' in %v", m.currentChannel.textInput.Value(), m.currentChannel.name)
+
 			m.client.Say(m.currentChannel.name, m.currentChannel.textInput.Value())
 
-			m.currentChannel.textInput = textinput.New()
+			m.currentChannel.textInput.Reset()
 		default:
 			m.currentChannel.textInput, cmd = m.currentChannel.textInput.Update(msg)
 		}
@@ -168,8 +173,28 @@ func (m model) View() string {
 	return s
 }
 
+func initialModel(sugar *zap.SugaredLogger, c *twitch.Client, initChannels []string) model {
+	channelInfo := make(twitchChannelInfos)
+	for _, c := range initChannels {
+		ti := textinput.New()
+		ti.Placeholder = fmt.Sprintf("Send a message in %v", c)
+		ti.Focus()
+		ti.CharLimit = 156
+		ti.Width = 20
+
+		channelInfo[c] = &twitchChannel{name: c, messageChannel: make(chan twitchMessage), textInput: ti}
+	}
+
+	return model{
+		currentChannel: channelInfo[initChannels[0]],
+		channels:       channelInfo,
+		logger:         sugar,
+		client:         c,
+	}
+}
+
 func Start(channels []string, loglevel int) error {
-	cfg := zap.NewProductionConfig()
+	cfg := zap.NewDevelopmentConfig()
 	cfg.OutputPaths = []string{
 		"log.log",
 	}
@@ -185,24 +210,10 @@ func Start(channels []string, loglevel int) error {
 		return errors.New("unable to load any channels, check config")
 	}
 
-	channelInfo := make(twitchChannelInfos)
-	for _, c := range channels {
-		ti := textinput.New()
-		ti.Placeholder = fmt.Sprintf("Send a message in %v", c)
-		ti.Focus()
-		ti.CharLimit = 156
-		ti.Width = 20
+	// TODO: extract auth to oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
+	c := twitch.NewClient("maartinbm", "oauth:secret")
 
-		channelInfo[c] = &twitchChannel{name: c, messageChannel: make(chan twitchMessage), textInput: ti}
-	}
-
-	c := twitch.NewClient("x", "oauth:y")
-	p := tea.NewProgram(model{
-		currentChannel: channelInfo[channels[0]],
-		channels:       channelInfo,
-		logger:         sugar,
-		client:         c,
-	},
+	p := tea.NewProgram(initialModel(sugar, c, channels),
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion())
 
