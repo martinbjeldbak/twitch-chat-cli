@@ -37,8 +37,7 @@ type twitchChannelInfos []*twitchChannel
 
 type model struct {
 	currChannel int
-	currClient  int
-	clients     []twitch.Client
+	client      *twitch.Client
 	channels    twitchChannelInfos
 	logger      *zap.SugaredLogger
 
@@ -54,9 +53,7 @@ func (m model) Init() tea.Cmd {
 	var initCmds []tea.Cmd
 
 	// Connect to desired twitch channels
-	for _, client := range m.clients {
-		initCmds = append(initCmds, connectTwitch(client, m.channels))
-	}
+	initCmds = append(initCmds, connectTwitch(m.client, m.channels))
 
 	// Emit Tea messages for each new Twitch message
 	for _, channel := range m.channels {
@@ -94,7 +91,7 @@ func waitForMessage(c *twitchChannel) tea.Cmd {
 	}
 }
 
-func handleChatMessage(client twitch.Client, ci twitchChannelInfos) func(m twitch.PrivateMessage) {
+func handleChatMessage(client *twitch.Client, ci twitchChannelInfos) func(m twitch.PrivateMessage) {
 	return func(m twitch.PrivateMessage) {
 		channel, ok := channelByName(m.Channel, ci)
 
@@ -114,7 +111,7 @@ func handleChatMessage(client twitch.Client, ci twitchChannelInfos) func(m twitc
 	}
 }
 
-func connectTwitch(client twitch.Client, ci twitchChannelInfos) tea.Cmd {
+func connectTwitch(client *twitch.Client, ci twitchChannelInfos) tea.Cmd {
 	return func() tea.Msg {
 		client.OnPrivateMessage(handleChatMessage(client, ci))
 
@@ -151,7 +148,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			m.logger.Infof("Saying '%v' in %v", currentChannel.textInput.Value(), currentChannel.name)
 
-			m.clients[m.currClient].Say(currentChannel.name, currentChannel.textInput.Value())
+			m.client.Say(currentChannel.name, currentChannel.textInput.Value())
 
 			currentChannel.textInput.Reset()
 		}
@@ -216,7 +213,7 @@ func (m model) View() string {
 	return b.String()
 }
 
-func initialModel(sugar *zap.SugaredLogger, cs []twitch.Client, initChannels []string, initUsername string) model {
+func initialModel(sugar *zap.SugaredLogger, client *twitch.Client, initChannels []string, initUsername string) model {
 	channelInfo := make(twitchChannelInfos, len(initChannels))
 	for i, c := range initChannels {
 		ti := textinput.New()
@@ -230,10 +227,9 @@ func initialModel(sugar *zap.SugaredLogger, cs []twitch.Client, initChannels []s
 
 	return model{
 		currChannel: 0,
-		currClient:  len(cs) - 1,
 		channels:    channelInfo,
 		logger:      sugar,
-		clients:     cs,
+		client:      client,
 	}
 }
 
@@ -255,22 +251,26 @@ func Start(channels []string, loglevel int, accounts []string) error {
 	}
 
 	// TODO: extract auth to oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
-	var clients []twitch.Client
+	var client *twitch.Client
 
 	initUsername := "anonymous"
 
-	clients = append(clients, *twitch.NewAnonymousClient()) // support connecting anonymously by default
+	if len(accounts) > 1 {
+		return errors.New("don't yet have support for multi-account")
+	}
 
-	for _, account := range accounts {
-		userToken := strings.Split(account, ":")
+	if len(accounts) == 0 {
+		client = twitch.NewAnonymousClient() // support connecting anonymously by default
+	} else {
+		userToken := strings.Split(accounts[0], ":")
 		username := userToken[0]
 		token := userToken[1]
 
-		clients = append(clients, *twitch.NewClient(username, fmt.Sprintf("oauth:%v", token)))
+		client = twitch.NewClient(username, fmt.Sprintf("oauth:%v", token))
 		initUsername = username
 	}
 
-	p := tea.NewProgram(initialModel(sugar, clients, channels, initUsername),
+	p := tea.NewProgram(initialModel(sugar, client, channels, initUsername),
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion())
 

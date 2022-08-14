@@ -22,7 +22,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return app.Start(viper.GetStringSlice("channels"), viper.GetInt("loglevel"))
+		return app.Start(viper.GetStringSlice("channels"), viper.GetInt("loglevel"), viper.GetStringSlice("accounts"))
 	},
 }
 
@@ -44,6 +44,9 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.twitch-chat-cli.yaml)")
+	rootCmd.PersistentFlags().StringSlice("accounts", nil, "accounts and their oauth tokens to use, for example \"hasanabi:secret,jakenbakelive:secret\" (NOTE: currently only support for a single account)")
+
+	viper.BindPFlag("accounts", rootCmd.PersistentFlags().Lookup("accounts"))
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

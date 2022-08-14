@@ -1,10 +1,11 @@
 ---
-username: martinbjeldbak
-token: asdf
+account: "maartinbm:oauthsecret" # DO NOT COMMIT ME TO REPO
 loglevel: -1 # https://pkg.go.dev/go.uber.org/zap@v1.21.0/zapcore#Level
 channels:
-  - jakenbakelive
-  - twitch
+  - dafran
+  #- nmplol
+  #- trainwreckstv
+  #- dafran
   # - hasanabi
   # - esl_csgo
   # - pestily

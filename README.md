@@ -27,6 +27,7 @@ Built With
 
 
 ## TODO
+- [ ] Add multiuser support
 - [ ] Tab for each chat/channel
 - [ ] Scrolling chat window
 - [ ] Authentication (temporarily via https://twitchapps.com/tmi/)
