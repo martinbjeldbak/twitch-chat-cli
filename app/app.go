@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -36,7 +37,6 @@ type twitchChannelInfos []*twitchChannel
 
 type model struct {
 	currentChannel int
-	totalPages     int
 	client         *twitch.Client
 	channels       twitchChannelInfos
 	logger         *zap.SugaredLogger
@@ -65,20 +65,20 @@ func (m model) Init() tea.Cmd {
 	return tea.Batch(initCmds...)
 }
 
-func (m *model) NextPage() {
+func (m *model) NextChannel() {
 	if !m.OnLastPage() {
 		m.currentChannel++
 	}
 }
 
-func (m *model) PrevPage() {
+func (m *model) PrevChannel() {
 	if m.currentChannel > 0 {
 		m.currentChannel--
 	}
 }
 
 func (m model) OnLastPage() bool {
-	return m.currentChannel == m.totalPages-1
+	return m.currentChannel == len(m.channels)-1
 }
 
 type errMsg struct{ err error }
@@ -96,7 +96,7 @@ func handleChatMessage(client *twitch.Client, ci twitchChannelInfos) func(m twit
 		channel, ok := channelByName(m.Channel, ci)
 
 		if !ok {
-			fmt.Printf("TODO: Got message for unknown channel, need to handle")
+			fmt.Printf("TODO: Got message for unknown channel, need to handle (create a new channel and insert in channel slice)")
 			os.Exit(1)
 		}
 		channel.messageChannel <- twitchMessage{
@@ -141,8 +141,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "esc":
 			return m, tea.Quit
-		case "up":
-			m.NextPage() // TODO: Complete
+		case "left":
+			m.PrevChannel()
+		case "right":
+			m.NextChannel()
 		case "enter":
 			m.logger.Infof("Saying '%v' in %v", currentChannel.textInput.Value(), currentChannel.name)
 
@@ -193,24 +195,22 @@ func (m model) View() string {
 		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
 	}
 
-	s := ""
+	var b strings.Builder
+
 	for _, msg := range m.channels[m.currentChannel].messagesToRender {
-		userMsg := lipgloss.NewStyle().
+		userName := lipgloss.NewStyle().
 			Inline(true).
 			Bold(true).
 			Foreground(lipgloss.Color(msg.user.Color)).
 			Render(msg.user.DisplayName)
 
-		userMsg += fmt.Sprintf(": %v\n", msg.message)
-
-		s += userMsg
+		b.WriteString(fmt.Sprintf("%v: %v\n", userName, msg.message))
 	}
 
-	s += fmt.Sprintf("%s", m.channels[m.currentChannel].textInput.View())
-	s += "\n"
+	b.WriteString(fmt.Sprintf("%s\n", m.channels[m.currentChannel].textInput.View()))
 
 	// Send to UI for rendering
-	return s
+	return b.String()
 }
 
 func initialModel(sugar *zap.SugaredLogger, c *twitch.Client, initChannels []string) model {
