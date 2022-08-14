@@ -27,20 +27,24 @@ Built With
 
 
 ## TODO
-- Authentication (temporarily via https://twitchapps.com/tmi/)
-- Chat
-- Goreleaser https://goreleaser.com/intro/
-- Animated emotes (image/gif?)
-- Add to lists
+- [ ] Tab for each chat/channel
+- [ ] Scrolling chat window
+- [ ] Authentication (temporarily via https://twitchapps.com/tmi/)
+- [ ] Enter chat msg
+- [ ] Vim-modes for navigation
+- [ ] Idea: Start in lurker mode. No chat input, just focus on seeing
+- [ ] Goreleaser https://goreleaser.com/intro/
+- [ ] Animated emotes (image/gif?)
+- [ ] Add to lists
   - https://github.com/charmbracelet/bubbletea#bubble-tea-in-the-wild
   - https://github.com/rothgar/awesome-tuis
-- Add vyper for config files https://github.com/spf13/viper
-- BTTW emote support via https://github.com/pajlada/gobttv (see usage https://github.com/pajbot/pajbot2/search?q=gobttv)
-- Add emote cache https://github.com/charmbracelet/charm/tree/main/kv
-- User profile pages + mentions
-- Nicer text wrapping (indentet length of user name)
-- Add info about terminal emote support (kitty / iterm2 / sixel)
+- [x] Add viper for config files https://github.com/spf13/viper
+- [ ] BTTW emote support via https://github.com/pajlada/gobttv (see usage https://github.com/pajbot/pajbot2/search?q=gobttv)
+- [ ] Add emote cache https://github.com/charmbracelet/charm/tree/main/kv
+- [ ] User profile pages + mentions
+- [ ] Nicer text wrapping (indentet length of user name)
+- [ ] Add info about terminal emote support (kitty / iterm2 / sixel)
   - https://github.com/alacritty/alacritty (soon)
     - soon https://github.com/alacritty/alacritty/pull/4763, https://github.com/alacritty/alacritty/issues/910
   - Windows Terminal does not support emotes
-- `PM` and `WhisperMessage` support. See https://pkg.go.dev/github.com/gempir/go-twitch-irc/v3@v3.0.0#readme-available-data
+- [ ] `PM` and `WhisperMessage` support. See https://pkg.go.dev/github.com/gempir/go-twitch-irc/v3@v3.0.0#readme-available-data
