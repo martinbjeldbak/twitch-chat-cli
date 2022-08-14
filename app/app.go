@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -31,11 +32,12 @@ type twitchChannel struct {
 	textInput        textinput.Model
 }
 
-type twitchChannelInfos map[string]*twitchChannel
+type twitchChannelInfos []*twitchChannel
 
 type model struct {
+	currentChannel int
+	totalPages     int
 	client         *twitch.Client
-	currentChannel *twitchChannel
 	channels       twitchChannelInfos
 	logger         *zap.SugaredLogger
 
@@ -43,8 +45,8 @@ type model struct {
 }
 
 type channelMessageMsg struct {
-	name    string
-	message twitchMessage
+	channelName string
+	message     twitchMessage
 }
 
 func (m model) Init() tea.Cmd {
@@ -63,19 +65,41 @@ func (m model) Init() tea.Cmd {
 	return tea.Batch(initCmds...)
 }
 
+func (m *model) NextPage() {
+	if !m.OnLastPage() {
+		m.currentChannel++
+	}
+}
+
+func (m *model) PrevPage() {
+	if m.currentChannel > 0 {
+		m.currentChannel--
+	}
+}
+
+func (m model) OnLastPage() bool {
+	return m.currentChannel == m.totalPages-1
+}
+
 type errMsg struct{ err error }
 
 func (e errMsg) Error() string { return e.err.Error() }
 
 func waitForMessage(c *twitchChannel) tea.Cmd {
 	return func() tea.Msg {
-		return channelMessageMsg{name: c.name, message: <-c.messageChannel}
+		return channelMessageMsg{channelName: c.name, message: <-c.messageChannel}
 	}
 }
 
 func handleChatMessage(client *twitch.Client, ci twitchChannelInfos) func(m twitch.PrivateMessage) {
 	return func(m twitch.PrivateMessage) {
-		ci[m.Channel].messageChannel <- twitchMessage{
+		channel, ok := channelByName(m.Channel, ci)
+
+		if !ok {
+			fmt.Printf("TODO: Got message for unknown channel, need to handle")
+			os.Exit(1)
+		}
+		channel.messageChannel <- twitchMessage{
 			message: m.Message,
 			user: user{
 				Name:        m.User.Name,
@@ -92,8 +116,8 @@ func connectTwitch(client *twitch.Client, ci twitchChannelInfos) tea.Cmd {
 		client.OnPrivateMessage(handleChatMessage(client, ci))
 
 		channelNames := make([]string, 0, len(ci))
-		for k := range ci {
-			channelNames = append(channelNames, k)
+		for _, k := range ci {
+			channelNames = append(channelNames, k.name)
 		}
 		client.Join(channelNames...)
 
@@ -108,7 +132,9 @@ func connectTwitch(client *twitch.Client, ci twitchChannelInfos) tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
-	// m.logger.Debugf("Got message %v\n", msg)
+	m.logger.Debugf("Got message %v", msg)
+
+	currentChannel := m.channels[m.currentChannel]
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -116,19 +142,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "esc":
 			return m, tea.Quit
 		case "up":
-			m.currentChannel = m.channels[m.currentChannel.name] // TODO: fix change channel
+			m.NextPage() // TODO: Complete
 		case "enter":
-			m.logger.Infof("Saying '%v' in %v", m.currentChannel.textInput.Value(), m.currentChannel.name)
+			m.logger.Infof("Saying '%v' in %v", currentChannel.textInput.Value(), currentChannel.name)
 
-			m.client.Say(m.currentChannel.name, m.currentChannel.textInput.Value())
+			m.client.Say(currentChannel.name, currentChannel.textInput.Value())
 
-			m.currentChannel.textInput.Reset()
+			currentChannel.textInput.Reset()
 		default:
-			m.currentChannel.textInput, cmd = m.currentChannel.textInput.Update(msg)
+			currentChannel.textInput, cmd = currentChannel.textInput.Update(msg)
 		}
 
 	case channelMessageMsg:
-		if channel, ok := m.channels[msg.name]; ok {
+		if channel, ok := channelByName(msg.channelName, m.channels); ok {
 			// Throw away old messages to improve performance
 			if len(channel.messagesToRender) > 1000 { // TODO: paramterise this
 				channel.messagesToRender = channel.messagesToRender[50:]
@@ -138,12 +164,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, waitForMessage(channel)
 		}
 
+	case tea.WindowSizeMsg:
+		// TODO: Handle console window change similar to
+		// https://github.com/charmbracelet/bubbletea/blob/master/examples/pager/main.go#L61
+		// https://github.com/charmbracelet/bubbletea/blob/master/examples/package-manager/main.go#L55
+
 	case errMsg:
 		m.err = msg
 		return m, tea.Quit
 	}
 
 	return m, cmd
+}
+
+func channelByName(name string, channels twitchChannelInfos) (*twitchChannel, bool) {
+	for _, v := range channels {
+		if v.name == name {
+			return v, true
+		}
+	}
+	return nil, false
 }
 
 func (m model) View() string {
@@ -154,7 +194,7 @@ func (m model) View() string {
 	}
 
 	s := ""
-	for _, msg := range m.currentChannel.messagesToRender {
+	for _, msg := range m.channels[m.currentChannel].messagesToRender {
 		userMsg := lipgloss.NewStyle().
 			Inline(true).
 			Bold(true).
@@ -166,7 +206,7 @@ func (m model) View() string {
 		s += userMsg
 	}
 
-	s += fmt.Sprintf("%s", m.currentChannel.textInput.View())
+	s += fmt.Sprintf("%s", m.channels[m.currentChannel].textInput.View())
 	s += "\n"
 
 	// Send to UI for rendering
@@ -174,19 +214,19 @@ func (m model) View() string {
 }
 
 func initialModel(sugar *zap.SugaredLogger, c *twitch.Client, initChannels []string) model {
-	channelInfo := make(twitchChannelInfos)
-	for _, c := range initChannels {
+	channelInfo := make(twitchChannelInfos, len(initChannels))
+	for i, c := range initChannels {
 		ti := textinput.New()
 		ti.Placeholder = fmt.Sprintf("Send a message in %v", c)
 		ti.Focus()
 		ti.CharLimit = 156
 		ti.Width = 20
 
-		channelInfo[c] = &twitchChannel{name: c, messageChannel: make(chan twitchMessage), textInput: ti}
+		channelInfo[i] = &twitchChannel{name: c, messageChannel: make(chan twitchMessage), textInput: ti}
 	}
 
 	return model{
-		currentChannel: channelInfo[initChannels[0]],
+		currentChannel: 0,
 		channels:       channelInfo,
 		logger:         sugar,
 		client:         c,
@@ -211,7 +251,7 @@ func Start(channels []string, loglevel int) error {
 	}
 
 	// TODO: extract auth to oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
-	c := twitch.NewClient("maartinbm", "oauth:secret")
+	c := twitch.NewClient("maartinbm", "oauth:6fi3egq5f1hib3wb7owuhb5q4729tt")
 
 	p := tea.NewProgram(initialModel(sugar, c, channels),
 		tea.WithAltScreen(),
