@@ -36,10 +36,10 @@ type twitchChannel struct {
 type twitchChannelInfos []*twitchChannel
 
 type model struct {
-	currentChannel int
-	client         *twitch.Client
-	channels       twitchChannelInfos
-	logger         *zap.SugaredLogger
+	currChannel int
+	client      *twitch.Client
+	channels    twitchChannelInfos
+	logger      *zap.SugaredLogger
 
 	err error
 }
@@ -67,18 +67,18 @@ func (m model) Init() tea.Cmd {
 
 func (m *model) NextChannel() {
 	if !m.OnLastPage() {
-		m.currentChannel++
+		m.currChannel++
 	}
 }
 
 func (m *model) PrevChannel() {
-	if m.currentChannel > 0 {
-		m.currentChannel--
+	if m.currChannel > 0 {
+		m.currChannel--
 	}
 }
 
 func (m model) OnLastPage() bool {
-	return m.currentChannel == len(m.channels)-1
+	return m.currChannel == len(m.channels)-1
 }
 
 type errMsg struct{ err error }
@@ -134,7 +134,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	m.logger.Debugf("Got message %v", msg)
 
-	currentChannel := m.channels[m.currentChannel]
+	currentChannel := m.channels[m.currChannel]
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -151,8 +151,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.client.Say(currentChannel.name, currentChannel.textInput.Value())
 
 			currentChannel.textInput.Reset()
-		default:
-			currentChannel.textInput, cmd = currentChannel.textInput.Update(msg)
 		}
 
 	case channelMessageMsg:
@@ -176,6 +174,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
+	currentChannel.textInput, cmd = currentChannel.textInput.Update(msg)
+
 	return m, cmd
 }
 
@@ -197,7 +197,7 @@ func (m model) View() string {
 
 	var b strings.Builder
 
-	for _, msg := range m.channels[m.currentChannel].messagesToRender {
+	for _, msg := range m.channels[m.currChannel].messagesToRender {
 		userName := lipgloss.NewStyle().
 			Inline(true).
 			Bold(true).
@@ -207,7 +207,7 @@ func (m model) View() string {
 		b.WriteString(fmt.Sprintf("%v: %v\n", userName, msg.message))
 	}
 
-	b.WriteString(fmt.Sprintf("%s\n", m.channels[m.currentChannel].textInput.View()))
+	b.WriteString(fmt.Sprintf("%s\n", m.channels[m.currChannel].textInput.View()))
 
 	// Send to UI for rendering
 	return b.String()
@@ -226,10 +226,10 @@ func initialModel(sugar *zap.SugaredLogger, c *twitch.Client, initChannels []str
 	}
 
 	return model{
-		currentChannel: 0,
-		channels:       channelInfo,
-		logger:         sugar,
-		client:         c,
+		currChannel: 0,
+		channels:    channelInfo,
+		logger:      sugar,
+		client:      c,
 	}
 }
 
@@ -251,7 +251,7 @@ func Start(channels []string, loglevel int) error {
 	}
 
 	// TODO: extract auth to oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
-	c := twitch.NewClient("maartinbm", "oauth:6fi3egq5f1hib3wb7owuhb5q4729tt")
+	c := twitch.NewClient("maartinbm", "oauth:secret")
 
 	p := tea.NewProgram(initialModel(sugar, c, channels),
 		tea.WithAltScreen(),
