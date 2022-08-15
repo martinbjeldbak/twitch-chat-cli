@@ -45,8 +45,10 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.twitch-chat-cli.yaml)")
 	rootCmd.PersistentFlags().StringSlice("accounts", nil, "accounts and their oauth tokens to use, for example \"hasanabi:secret,jakenbakelive:secret\" (NOTE: currently only support for a single account)")
+	rootCmd.PersistentFlags().StringSlice("channels", nil, "channels to join")
 
 	viper.BindPFlag("accounts", rootCmd.PersistentFlags().Lookup("accounts"))
+	viper.BindPFlag("channels", rootCmd.PersistentFlags().Lookup("channels"))
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
