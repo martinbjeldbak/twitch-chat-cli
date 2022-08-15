@@ -31,6 +31,7 @@ Built With
 - [ ] Tab for each chat/channel
 - [ ] Scrolling chat window
 - [ ] Authentication (temporarily via https://twitchapps.com/tmi/)
+  - Consider via oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
 - [ ] Enter chat msg
 - [ ] Vim-modes for navigation
 - [ ] Idea: Start in lurker mode. No chat input, just focus on seeing

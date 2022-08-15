@@ -250,10 +250,11 @@ func Start(channels []string, loglevel int, accounts []string) error {
 		return errors.New("unable to load any channels, check config")
 	}
 
-	// TODO: extract auth to oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
 	var client *twitch.Client
 
 	username := "anonymous"
+
+	sugar.Infof("Accounts: %v", accounts)
 
 	if len(accounts) > 1 {
 		return errors.New("don't yet have support for multi-account")
@@ -263,7 +264,7 @@ func Start(channels []string, loglevel int, accounts []string) error {
 		client = twitch.NewAnonymousClient() // support connecting anonymously by default
 	} else {
 		userToken := strings.Split(accounts[0], ":")
-		username := userToken[0]
+		username = userToken[0]
 		token := userToken[1]
 
 		client = twitch.NewClient(username, fmt.Sprintf("oauth:%v", token))
