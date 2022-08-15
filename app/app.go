@@ -253,7 +253,7 @@ func Start(channels []string, loglevel int, accounts []string) error {
 	// TODO: extract auth to oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
 	var client *twitch.Client
 
-	initUsername := "anonymous"
+	username := "anonymous"
 
 	if len(accounts) > 1 {
 		return errors.New("don't yet have support for multi-account")
@@ -267,10 +267,9 @@ func Start(channels []string, loglevel int, accounts []string) error {
 		token := userToken[1]
 
 		client = twitch.NewClient(username, fmt.Sprintf("oauth:%v", token))
-		initUsername = username
 	}
 
-	p := tea.NewProgram(initialModel(sugar, client, channels, initUsername),
+	p := tea.NewProgram(initialModel(sugar, client, channels, username),
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion())
 
