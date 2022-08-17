@@ -32,9 +32,9 @@ Built With
 - [ ] Scrolling chat window
 - [ ] Authentication (temporarily via https://twitchapps.com/tmi/)
   - Consider via oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
-- [ ] Enter chat msg
+- [x] Enter chat msg
 - [ ] Vim-modes for navigation
-- [ ] Idea: Start in lurker mode. No chat input, just focus on seeing
+- [x] Idea: Start in lurker mode. No chat input, just focus on seeing
 - [x] Goreleaser https://goreleaser.com/intro/
 - [ ] Animated emotes (image/gif?)
 - [ ] Add to lists
