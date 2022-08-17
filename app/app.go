@@ -23,20 +23,6 @@ import (
 // tea.EnterAltScreen().
 const useHighPerformanceRenderer = false
 
-var (
-	titleStyle = func() lipgloss.Style {
-		b := lipgloss.RoundedBorder()
-		b.Right = "├"
-		return lipgloss.NewStyle().BorderStyle(b).Padding(0, 1)
-	}()
-
-	infoStyle = func() lipgloss.Style {
-		b := lipgloss.RoundedBorder()
-		b.Left = "┤"
-		return titleStyle.Copy().BorderStyle(b)
-	}()
-)
-
 type user struct {
 	Name        string
 	DisplayName string
@@ -249,19 +235,6 @@ func (m model) footerView() string {
 	// return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
 
 	return fmt.Sprintf("%s\n", m.currentChannel().textInput.View())
-}
-
-func (m model) headerView() string {
-	title := titleStyle.Render(m.currentChannel().name)
-	line := strings.Repeat("-", max(0, m.viewport.Width-lipgloss.Width(title)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 func channelByName(name string, channels twitchChannelInfos) (*twitchChannel, bool) {
