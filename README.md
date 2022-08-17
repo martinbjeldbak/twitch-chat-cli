@@ -35,7 +35,7 @@ Built With
 - [ ] Enter chat msg
 - [ ] Vim-modes for navigation
 - [ ] Idea: Start in lurker mode. No chat input, just focus on seeing
-- [ ] Goreleaser https://goreleaser.com/intro/
+- [x] Goreleaser https://goreleaser.com/intro/
 - [ ] Animated emotes (image/gif?)
 - [ ] Add to lists
   - https://github.com/charmbracelet/bubbletea#bubble-tea-in-the-wild
