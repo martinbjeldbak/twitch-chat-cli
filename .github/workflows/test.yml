@@ -25,6 +25,16 @@ jobs:
           version: latest
           args: --verbose
 
+  goreleaser-check:
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Check GoReleaser config
+        with:
+          version: latest
+          args: check
+
   test-unix:
     strategy:
       fail-fast: false
