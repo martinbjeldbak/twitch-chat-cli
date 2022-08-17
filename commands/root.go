@@ -14,13 +14,14 @@ var cfgFile string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "twitch-chat-cli",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "Chat on Twitch.tv from your terminal",
+	Long: `A Twitch chat client in the terminal.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Allows chatting in multiple Twitch channels from the comfort of your terminal.
+Supports connecting anonymously or as an authenticated user.
+
+This application pairs nicely with Streamlink <https://streamlink.github.io/> for
+a complete website-free viewing experience!`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return app.Start(viper.GetStringSlice("channels"), viper.GetInt("loglevel"), viper.GetStringSlice("accounts"))
 	},
