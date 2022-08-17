@@ -183,11 +183,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case channelMessageMsg:
 		if channel, ok := channelByName(msg.channelName, m.channels); ok {
-			// Throw away old messages to improve performance
-			if len(channel.messagesToRender) > 1000 { // TODO: paramterise this
-				channel.messagesToRender = channel.messagesToRender[50:]
-			}
-
 			channel.messagesToRender = append(channel.messagesToRender, msg.message)
 
 			if channel == currentChannel {
