@@ -7,11 +7,34 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/gempir/go-twitch-irc/v3"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+)
+
+// You generally won't need this unless you're processing stuff with
+// complicated ANSI escape sequences. Turn it on if you notice flickering.
+//
+// Also keep in mind that high performance rendering only works for programs
+// that use the full size of the terminal. We're enabling that below with
+// tea.EnterAltScreen().
+const useHighPerformanceRenderer = false
+
+var (
+	titleStyle = func() lipgloss.Style {
+		b := lipgloss.RoundedBorder()
+		b.Right = "├"
+		return lipgloss.NewStyle().BorderStyle(b).Padding(0, 1)
+	}()
+
+	infoStyle = func() lipgloss.Style {
+		b := lipgloss.RoundedBorder()
+		b.Left = "┤"
+		return titleStyle.Copy().BorderStyle(b)
+	}()
 )
 
 type user struct {
@@ -40,6 +63,8 @@ type model struct {
 	client      *twitch.Client
 	channels    twitchChannelInfos
 	logger      *zap.SugaredLogger
+	viewport    viewport.Model
+	ready       bool
 
 	err error
 }
@@ -131,10 +156,11 @@ func connectTwitch(client *twitch.Client, ci twitchChannelInfos) tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+	var cmds []tea.Cmd
 
 	m.logger.Debugf("Got message %v", msg)
 
-	currentChannel := m.channels[m.currChannel]
+	currentChannel := m.currentChannel()
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -143,8 +169,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "left":
 			m.PrevChannel()
+			m.viewport.SetContent(m.RenderMessages())
 		case "right":
 			m.NextChannel()
+			m.viewport.SetContent(m.RenderMessages())
 		case "enter":
 			m.logger.Infof("Saying '%v' in %v", currentChannel.textInput.Value(), currentChannel.name)
 
@@ -161,22 +189,84 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			channel.messagesToRender = append(channel.messagesToRender, msg.message)
-			return m, waitForMessage(channel)
+
+			if channel == currentChannel {
+				m.viewport.SetContent(m.RenderMessages())
+				m.viewport.GotoBottom()
+			}
+
+			cmds = append(cmds, waitForMessage(channel))
 		}
 
 	case tea.WindowSizeMsg:
 		// TODO: Handle console window change similar to
 		// https://github.com/charmbracelet/bubbletea/blob/master/examples/pager/main.go#L61
 		// https://github.com/charmbracelet/bubbletea/blob/master/examples/package-manager/main.go#L55
+		// headerHeight := lipgloss.Height(m.headerView())
+		headerHeight := 0
+		footerHeight := lipgloss.Height(m.footerView())
+		verticalMarginHeight := headerHeight + footerHeight
 
+		if !m.ready {
+			m.viewport = viewport.New(msg.Width, msg.Height-verticalMarginHeight)
+			m.viewport.YPosition = headerHeight
+			m.viewport.HighPerformanceRendering = useHighPerformanceRenderer
+			m.ready = true
+
+			// This is only necessary for high performance rendering, which in
+			// most cases you won't need.
+			//
+			// Render the viewport one line below the header.
+			m.viewport.YPosition = headerHeight + 1
+		} else {
+			m.viewport.Width = msg.Width
+			m.viewport.Height = msg.Height - verticalMarginHeight
+		}
+
+		if useHighPerformanceRenderer {
+			// Render (or re-render) the whole viewport. Necessary both to
+			// initialize the viewport and when the window is resized.
+			//
+			// This is needed for high-performance rendering only.
+			cmds = append(cmds, viewport.Sync(m.viewport))
+		}
 	case errMsg:
 		m.err = msg
 		return m, tea.Quit
 	}
 
-	currentChannel.textInput, cmd = currentChannel.textInput.Update(msg)
+	m.viewport, cmd = m.viewport.Update(msg)
+	cmds = append(cmds, cmd)
 
-	return m, cmd
+	currentChannel.textInput, cmd = currentChannel.textInput.Update(msg)
+	cmds = append(cmds, cmd)
+
+	return m, tea.Batch(cmds...)
+}
+
+func (m model) currentChannel() *twitchChannel {
+	return m.channels[m.currChannel]
+}
+
+func (m model) footerView() string {
+	// info := infoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
+	// line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
+	// return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
+
+	return fmt.Sprintf("%s\n", m.currentChannel().textInput.View())
+}
+
+func (m model) headerView() string {
+	title := titleStyle.Render(m.currentChannel().name)
+	line := strings.Repeat("-", max(0, m.viewport.Width-lipgloss.Width(title)))
+	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func channelByName(name string, channels twitchChannelInfos) (*twitchChannel, bool) {
@@ -188,16 +278,9 @@ func channelByName(name string, channels twitchChannelInfos) (*twitchChannel, bo
 	return nil, false
 }
 
-func (m model) View() string {
-	if m.err != nil {
-		m.logger.Debugf("We had some trouble: %v\n", m.err)
-
-		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
-	}
-
+func (m model) RenderMessages() string {
 	var b strings.Builder
-
-	for _, msg := range m.channels[m.currChannel].messagesToRender {
+	for _, msg := range m.currentChannel().messagesToRender {
 		userName := lipgloss.NewStyle().
 			Inline(true).
 			Bold(true).
@@ -206,11 +289,24 @@ func (m model) View() string {
 
 		b.WriteString(fmt.Sprintf("%v: %v\n", userName, msg.message))
 	}
+	return b.String()
+}
 
-	b.WriteString(fmt.Sprintf("%s\n", m.channels[m.currChannel].textInput.View()))
+func (m model) View() string {
+	if m.err != nil {
+		m.logger.Debugf("We had some trouble: %v\n", m.err)
+
+		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
+	}
+
+	if !m.ready {
+		return "\n Initializing..."
+	}
+
+	// var b strings.Builder
 
 	// Send to UI for rendering
-	return b.String()
+	return fmt.Sprintf("%s\n%s", m.viewport.View(), m.footerView())
 }
 
 func initialModel(sugar *zap.SugaredLogger, client *twitch.Client, initChannels []string, initUsername string) model {
