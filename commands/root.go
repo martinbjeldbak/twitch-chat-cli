@@ -47,8 +47,14 @@ func init() {
 	rootCmd.PersistentFlags().StringSlice("accounts", nil, "accounts and their oauth tokens to use, for example \"hasanabi:secret,jakenbakelive:secret\" (NOTE: currently only support for a single account)")
 	rootCmd.PersistentFlags().StringSlice("channels", nil, "channels to join")
 
-	viper.BindPFlag("accounts", rootCmd.PersistentFlags().Lookup("accounts"))
-	viper.BindPFlag("channels", rootCmd.PersistentFlags().Lookup("channels"))
+	err := viper.BindPFlag("accounts", rootCmd.PersistentFlags().Lookup("accounts"))
+	if err != nil {
+		fmt.Printf("Error binding pflag '%v': %v", "accounts", err)
+	}
+	err = viper.BindPFlag("channels", rootCmd.PersistentFlags().Lookup("channels"))
+	if err != nil {
+		fmt.Printf("Error binding pflag '%v': %v", "channels", err)
+	}
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
