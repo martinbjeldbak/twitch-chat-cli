@@ -24,9 +24,12 @@ checksum:
   name_template: 'checksums.txt'
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
-changelog:
+changelog: # docs: https://goreleaser.com/customization/changelog
+  use: github
   sort: asc
   filters:
     exclude:
       - '^docs:'
       - '^test:'
+release:
+    draft: true
