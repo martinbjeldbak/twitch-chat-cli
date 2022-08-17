@@ -28,8 +28,9 @@ Built With
 
 ## TODO
 - [ ] Add multiuser support
-- [ ] Tab for each chat/channel
-- [ ] Scrolling chat window
+- [x] Tab for each chat/channel
+- [x] Scrolling chat window
+- [ ] Remove older messages
 - [ ] Authentication (temporarily via https://twitchapps.com/tmi/)
   - Consider via oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
 - [x] Enter chat msg
