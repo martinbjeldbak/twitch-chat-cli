@@ -1,5 +1,5 @@
 ---
-account: "username:oauthsecret" # DO NOT COMMIT ME TO REPO
+account: "username:oauthsecret" # DO NOT COMMIT ME TO REPO. Can get an oauth token from https://twitchapps.com/tmi/
 loglevel: -1 # https://pkg.go.dev/go.uber.org/zap@v1.21.0/zapcore#Level
 channels:
   - dafran
