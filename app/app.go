@@ -233,6 +233,12 @@ func initialModel(sugar *zap.SugaredLogger, client *twitch.Client, initChannels 
 	}
 }
 
+func safeSync(logger *zap.Logger, err *error) {
+	if serr := logger.Sync(); serr != nil && *err == nil {
+		*err = serr
+	}
+}
+
 func Start(channels []string, loglevel int, accounts []string) error {
 	cfg := zap.NewDevelopmentConfig()
 	cfg.OutputPaths = []string{
@@ -241,9 +247,12 @@ func Start(channels []string, loglevel int, accounts []string) error {
 	cfg.Development = true
 	cfg.Level.SetLevel(zapcore.Level(loglevel))
 
-	logger, _ := cfg.Build()
+	logger, err := cfg.Build()
+	if err != nil {
+		return err
+	}
 
-	defer logger.Sync() // flushes buffer, if any
+	defer safeSync(logger, &err) // flushes buffer, if any
 	sugar := logger.Sugar()
 
 	if len(channels) == 0 {
