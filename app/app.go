@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/gempir/go-twitch-irc/v3"
+	"github.com/muesli/reflow/wordwrap"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -207,9 +208,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			//
 			// Render the viewport one line below the header.
 			m.viewport.YPosition = headerHeight + 1
+			for _, c := range m.channels {
+				c.textInput.Width = m.viewport.Width
+			}
 		} else {
 			m.viewport.Width = msg.Width
 			m.viewport.Height = msg.Height - verticalMarginHeight
+
+			for _, c := range m.channels {
+				c.textInput.Width = m.viewport.Width
+			}
 		}
 
 		if useHighPerformanceRenderer {
@@ -265,7 +273,7 @@ func (m model) RenderMessages() string {
 
 		b.WriteString(fmt.Sprintf("%v: %v\n", userName, msg.message))
 	}
-	return b.String()
+	return wordwrap.String(b.String(), m.viewport.Width)
 }
 
 func (m model) View() string {
