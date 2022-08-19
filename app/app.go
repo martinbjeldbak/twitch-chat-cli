@@ -273,7 +273,7 @@ func (m model) RenderMessages() string {
 
 		b.WriteString(fmt.Sprintf("%v: %v\n", userName, msg.message))
 	}
-	return wordwrap.String(b.String(), m.viewport.Width)
+	return b.String()
 }
 
 func (m model) View() string {
@@ -290,7 +290,7 @@ func (m model) View() string {
 	// var b strings.Builder
 
 	// Send to UI for rendering
-	return fmt.Sprintf("%s\n%s", m.viewport.View(), m.footerView())
+	return fmt.Sprintf("%s\n%s", wordwrap.String(m.viewport.View(), m.viewport.Width), m.footerView())
 }
 
 func initialModel(sugar *zap.SugaredLogger, client *twitch.Client, initChannels []string, initUsername string) model {
