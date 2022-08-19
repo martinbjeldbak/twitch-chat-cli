@@ -1,0 +1,21 @@
+<html>
+
+<body>
+  <h1>
+    Access token: <p id="accessToken">access_token</p>
+  </h1>
+  <h1>
+    Client ID: <p id="clientId">client_id</p>
+  </h1>
+</body>
+
+<script>
+  const parsedHash = new URLSearchParams(
+    window.location.hash.substring(1) // skip the first char (#)
+  );
+
+  console.log(parsedHash.get("access_token"));
+  document.getElementById("accessToken").innerText = parsedHash.get("access_token");
+</script>
+
+</html>
