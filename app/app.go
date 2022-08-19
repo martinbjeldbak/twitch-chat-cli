@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/gempir/go-twitch-irc/v3"
 	"github.com/muesli/reflow/wordwrap"
+	"github.com/nicklaw5/helix"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -37,10 +38,12 @@ type twitchMessage struct {
 }
 
 type twitchChannel struct {
-	name             string
-	messageChannel   chan twitchMessage // where we will get messages
-	messagesToRender []twitchMessage
-	textInput        textinput.Model
+	name               string
+	messageChannel     chan twitchMessage // where we will get messages
+	messagesToRender   []twitchMessage
+	textInput          textinput.Model
+	userDetails        helix.User
+	channelInformation helix.ChannelInformation
 }
 
 type twitchChannelInfos []*twitchChannel
@@ -48,6 +51,7 @@ type twitchChannelInfos []*twitchChannel
 type model struct {
 	currChannel int
 	client      *twitch.Client
+	helixClient *helix.Client
 	channels    twitchChannelInfos
 	logger      *zap.SugaredLogger
 	viewport    viewport.Model
@@ -293,16 +297,42 @@ func (m model) View() string {
 	return fmt.Sprintf("%s\n%s", wordwrap.String(m.viewport.View(), m.viewport.Width), m.footerView())
 }
 
-func initialModel(sugar *zap.SugaredLogger, client *twitch.Client, initChannels []string, initUsername string) model {
+func initialModel(sugar *zap.SugaredLogger, client *twitch.Client, initChannels []string, initUsername string, clientId string, appAccessToken string) model {
+	hclient, _ := helix.NewClient(&helix.Options{
+		ClientID:       clientId,
+		AppAccessToken: appAccessToken,
+	})
+
+	// TODO: Handlerror
+	usersResp, _ := hclient.GetUsers(&helix.UsersParams{
+		Logins: initChannels,
+	})
+	ids := make([]string, len(usersResp.Data.Users))
+	for i, u := range usersResp.Data.Users {
+		ids[i] = u.ID
+	}
+	// TODO: Handlerror
+	liveInfos, _ := hclient.GetChannelInformation(&helix.GetChannelInformationParams{
+		BroadcasterIDs: ids,
+	})
+
 	channelInfo := make(twitchChannelInfos, len(initChannels))
 	for i, c := range initChannels {
+		cInfo := liveInfos.Data.Channels[i]
 		ti := textinput.New()
-		ti.Placeholder = fmt.Sprintf("Send a message in %v as %v", c, initUsername)
+
+		ti.Placeholder = fmt.Sprintf("Send a message in %v (%v) as %v", c, cInfo.GameName, initUsername)
 		ti.Focus()
 		ti.CharLimit = 156
 		ti.Width = 20
 
-		channelInfo[i] = &twitchChannel{name: c, messageChannel: make(chan twitchMessage), textInput: ti}
+		channelInfo[i] = &twitchChannel{
+			name:               c,
+			messageChannel:     make(chan twitchMessage),
+			textInput:          ti,
+			userDetails:        usersResp.Data.Users[i],
+			channelInformation: cInfo,
+		}
 	}
 
 	return model{
@@ -310,6 +340,7 @@ func initialModel(sugar *zap.SugaredLogger, client *twitch.Client, initChannels 
 		channels:    channelInfo,
 		logger:      sugar,
 		client:      client,
+		helixClient: hclient,
 	}
 }
 
@@ -319,7 +350,7 @@ func safeSync(logger *zap.Logger, err *error) {
 	}
 }
 
-func Start(channels []string, loglevel int, accounts []string) error {
+func Start(channels []string, loglevel int, accounts []string, clientId string, appAccessToken string) error {
 	cfg := zap.NewDevelopmentConfig()
 	cfg.OutputPaths = []string{
 		"log.log",
@@ -359,7 +390,7 @@ func Start(channels []string, loglevel int, accounts []string) error {
 		client = twitch.NewClient(username, fmt.Sprintf("oauth:%v", token))
 	}
 
-	p := tea.NewProgram(initialModel(sugar, client, channels, username),
+	p := tea.NewProgram(initialModel(sugar, client, channels, username, clientId, appAccessToken),
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion())
 
