@@ -140,6 +140,16 @@ func connectTwitch(client *twitch.Client, ci twitchChannelInfos) tea.Cmd {
 	}
 }
 
+func sayMsg(client *twitch.Client, channel *twitchChannel, message string) tea.Cmd {
+	return func() tea.Msg {
+		client.Say(channel.name, message)
+
+		channel.textInput.Reset()
+
+		return nil
+	}
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
@@ -162,9 +172,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			m.logger.Infof("Saying '%v' in %v", currentChannel.textInput.Value(), currentChannel.name)
 
-			m.client.Say(currentChannel.name, currentChannel.textInput.Value())
-
-			currentChannel.textInput.Reset()
+			cmds = append(cmds, sayMsg(m.client, currentChannel, currentChannel.textInput.Value()))
 		}
 
 	case channelMessageMsg:
