@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -46,13 +47,48 @@ type twitchChannel struct {
 	channelInformation helix.ChannelInformation
 }
 
+type twitchAccount struct {
+	Username    string
+	UserId      int
+	ClientId    string
+	AccessToken string
+}
+
+func (a *twitchAccount) UnmarshalString(encodedKvs string) error {
+	kvs := strings.Split(encodedKvs, ";")
+
+	for _, kv := range kvs {
+		entry := strings.Split(kv, "=")
+
+		switch entry[0] {
+		case "username":
+			a.Username = entry[1]
+		case "user_id":
+			userId, err := strconv.Atoi(entry[1])
+			if err != nil {
+				return err
+			}
+
+			a.UserId = userId
+		case "client_id":
+			a.ClientId = entry[1]
+		case "oauth_token":
+			a.AccessToken = entry[1]
+		}
+	}
+	return nil
+}
+
 type twitchChannelInfos []*twitchChannel
+type accountInfos []twitchAccount
 
 type model struct {
 	currChannel  int
+	channels     twitchChannelInfos
+	currAccount  int
+	accounts     accountInfos
 	client       *twitch.Client
 	helixClient  *helix.Client
-	channels     twitchChannelInfos
 	logger       *zap.SugaredLogger
 	viewport     viewport.Model
 	ready        bool
@@ -302,31 +338,66 @@ func (m model) View() string {
 	return fmt.Sprintf("%s\n%s", wordwrap.String(m.viewport.View(), m.viewport.Width), m.footerView())
 }
 
-func initialModel(sugar *zap.SugaredLogger, client *twitch.Client, initChannels []string, initUsername string, clientId string, appAccessToken string) model {
-	hclient, _ := helix.NewClient(&helix.Options{
-		ClientID:       clientId,
-		AppAccessToken: appAccessToken,
-	})
+func initialModel(sugar *zap.SugaredLogger, encodedAccountsInfo []string, initChannels []string, clientId string) (model, error) {
+	var client *twitch.Client
 
-	// TODO: Handlerror
-	usersResp, _ := hclient.GetUsers(&helix.UsersParams{
+	as := make(accountInfos, 0, len(encodedAccountsInfo)) // +1 for anon account
+	//as = append(as, twitchAccount{Username: "anonymous"})
+
+	for _, kvs := range encodedAccountsInfo {
+		var a twitchAccount
+
+		err := a.UnmarshalString(kvs)
+		if err != nil {
+			return model{}, err
+		}
+
+		as = append(as, a)
+	}
+
+	sugar.Infof("AS:\n%v", as)
+
+	client = twitch.NewClient(as[0].Username, fmt.Sprintf("oauth:%v", as[0].AccessToken))
+
+	hclient, err := helix.NewClient(&helix.Options{
+		ClientID:       as[0].ClientId,
+		AppAccessToken: as[0].AccessToken,
+	})
+	if err != nil {
+		return model{}, err
+	}
+
+	usersResp, err := hclient.GetUsers(&helix.UsersParams{
 		Logins: initChannels,
 	})
+	if err != nil {
+		return model{}, err
+	}
+	if usersResp.Error != "" {
+		return model{}, fmt.Errorf("error requesting channels: %v", usersResp.Error)
+	}
+
 	ids := make([]string, len(usersResp.Data.Users))
 	for i, u := range usersResp.Data.Users {
 		ids[i] = u.ID
 	}
-	// TODO: Handlerror
-	liveInfos, _ := hclient.GetChannelInformation(&helix.GetChannelInformationParams{
+
+	liveInfos, err := hclient.GetChannelInformation(&helix.GetChannelInformationParams{
 		BroadcasterIDs: ids,
 	})
+	if err != nil {
+		return model{}, err
+	}
+	if liveInfos.Error != "" {
+		return model{}, fmt.Errorf("error requesting channels: %v", usersResp.Error)
+	}
 
 	channelInfo := make(twitchChannelInfos, len(initChannels))
 	for i, c := range initChannels {
 		cInfo := liveInfos.Data.Channels[i]
 		ti := textinput.New()
 
-		ti.Placeholder = fmt.Sprintf("Send a message in %v (streaming %v) as %v", c, cInfo.GameName, initUsername)
+		ti.Placeholder = fmt.Sprintf("Send a message in %v (streaming %v) as %v", c, cInfo.GameName, as[0].Username)
 		ti.Focus()
 		ti.CharLimit = 156
 		ti.Width = 20
@@ -347,7 +418,8 @@ func initialModel(sugar *zap.SugaredLogger, client *twitch.Client, initChannels 
 		client:       client,
 		helixClient:  hclient,
 		messageStyle: make(map[string]lipgloss.Style),
-	}
+		accounts:     as,
+	}, nil
 }
 
 func safeSync(logger *zap.Logger, err *error) {
@@ -375,28 +447,12 @@ func Start(channels []string, loglevel int, accounts []string, clientId string, 
 	if len(channels) == 0 {
 		return errors.New("unable to load any channels, check config")
 	}
-
-	var client *twitch.Client
-
-	username := "anonymous"
-
-	sugar.Infof("Accounts: %v", accounts)
-
-	if len(accounts) > 1 {
-		return errors.New("don't yet have support for multi-account")
+	initModel, err := initialModel(sugar, accounts, channels, clientId)
+	if err != nil {
+		return err
 	}
 
-	if len(accounts) == 0 {
-		client = twitch.NewAnonymousClient() // support connecting anonymously by default
-	} else {
-		userToken := strings.Split(accounts[0], ":")
-		username = userToken[0]
-		token := userToken[1]
-
-		client = twitch.NewClient(username, fmt.Sprintf("oauth:%v", token))
-	}
-
-	p := tea.NewProgram(initialModel(sugar, client, channels, username, clientId, strings.Split(accounts[0], ":")[1]),
+	p := tea.NewProgram(initModel,
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion())
 
