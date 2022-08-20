@@ -1,5 +1,6 @@
 ---
-account: "username:oauthsecret" # DO NOT COMMIT ME TO REPO. Can get an oauth token from https://twitchapps.com/tmi/
+accounts:
+  - username=xqc;user_id=123;client_id=456;oauth_token=789;
 loglevel: -1 # https://pkg.go.dev/go.uber.org/zap@v1.21.0/zapcore#Level
 channels:
   - dafran
