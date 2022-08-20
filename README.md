@@ -108,8 +108,9 @@ Currently the binary needs to be downloaded manually from the GitHub releases pa
   - Consider via oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
 - [x] Enter chat msg
 - [ ] Vim-modes for navigation
-- [x] Idea: Start in lurker mode. No chat input, just focus on seeing
+- [ ] Idea: Start in lurker mode. No chat input, just focus on seeing
 - [x] Goreleaser https://goreleaser.com/intro/
+- [ ] Goreleaser: release docker image (have Dockerfile already, but first fix it up with `distroless`)
 - [ ] Animated emotes (image/gif?)
 - [ ] Add to lists
   - https://github.com/charmbracelet/bubbletea#bubble-tea-in-the-wild
