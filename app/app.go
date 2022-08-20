@@ -49,13 +49,14 @@ type twitchChannel struct {
 type twitchChannelInfos []*twitchChannel
 
 type model struct {
-	currChannel int
-	client      *twitch.Client
-	helixClient *helix.Client
-	channels    twitchChannelInfos
-	logger      *zap.SugaredLogger
-	viewport    viewport.Model
-	ready       bool
+	currChannel  int
+	client       *twitch.Client
+	helixClient  *helix.Client
+	channels     twitchChannelInfos
+	logger       *zap.SugaredLogger
+	viewport     viewport.Model
+	ready        bool
+	messageStyle map[string]lipgloss.Style
 
 	err error
 }
@@ -269,11 +270,17 @@ func channelByName(name string, channels twitchChannelInfos) (*twitchChannel, bo
 func (m model) RenderMessages() string {
 	var b strings.Builder
 	for _, msg := range m.currentChannel().messagesToRender {
-		userName := lipgloss.NewStyle().
-			Inline(true).
-			Bold(true).
-			Foreground(lipgloss.Color(msg.user.Color)).
-			Render(msg.user.DisplayName)
+		style, ok := m.messageStyle[msg.user.Color]
+
+		if !ok {
+			m.messageStyle[msg.user.Color] = lipgloss.NewStyle().
+				Inline(true).
+				Bold(true).
+				Foreground(lipgloss.Color(msg.user.Color))
+			style = m.messageStyle[msg.user.Color]
+		}
+
+		userName := style.MaxWidth(m.viewport.Width).Render(msg.user.DisplayName)
 
 		b.WriteString(fmt.Sprintf("%v: %v\n", userName, msg.message))
 	}
@@ -321,7 +328,7 @@ func initialModel(sugar *zap.SugaredLogger, client *twitch.Client, initChannels 
 		cInfo := liveInfos.Data.Channels[i]
 		ti := textinput.New()
 
-		ti.Placeholder = fmt.Sprintf("Send a message in %v (%v) as %v", c, cInfo.GameName, initUsername)
+		ti.Placeholder = fmt.Sprintf("Send a message in %v (streaming %v) as %v", c, cInfo.GameName, initUsername)
 		ti.Focus()
 		ti.CharLimit = 156
 		ti.Width = 20
@@ -336,11 +343,12 @@ func initialModel(sugar *zap.SugaredLogger, client *twitch.Client, initChannels 
 	}
 
 	return model{
-		currChannel: 0,
-		channels:    channelInfo,
-		logger:      sugar,
-		client:      client,
-		helixClient: hclient,
+		currChannel:  0,
+		channels:     channelInfo,
+		logger:       sugar,
+		client:       client,
+		helixClient:  hclient,
+		messageStyle: make(map[string]lipgloss.Style),
 	}
 }
 
