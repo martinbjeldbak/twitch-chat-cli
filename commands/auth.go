@@ -35,7 +35,7 @@ var authCmd = &cobra.Command{
 		q.Set("response_type", "token id_token")
 		q.Set("client_id", clientId)
 		q.Set("redirect_uri", "http://localhost:8090/callback")
-		q.Set("scope", url.PathEscape("openid"))
+		q.Set("scope", "openid chat:read chat:edit whispers:read whispers:edit")
 		q.Set("nonce", fmt.Sprint(nonce))
 		q.Set("state", fmt.Sprint(state))
 		u.RawQuery = q.Encode()
@@ -45,7 +45,6 @@ var authCmd = &cobra.Command{
 		go func() {
 			http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 				http.ServeFile(w, r, "./static/index.html")
-
 			})
 
 			if err := http.ListenAndServe(":8090", nil); err != nil {

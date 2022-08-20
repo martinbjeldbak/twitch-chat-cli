@@ -298,8 +298,6 @@ func (m model) View() string {
 		return "\n Initializing..."
 	}
 
-	// var b strings.Builder
-
 	// Send to UI for rendering
 	return fmt.Sprintf("%s\n%s", wordwrap.String(m.viewport.View(), m.viewport.Width), m.footerView())
 }
@@ -398,7 +396,7 @@ func Start(channels []string, loglevel int, accounts []string, clientId string, 
 		client = twitch.NewClient(username, fmt.Sprintf("oauth:%v", token))
 	}
 
-	p := tea.NewProgram(initialModel(sugar, client, channels, username, clientId, appAccessToken),
+	p := tea.NewProgram(initialModel(sugar, client, channels, username, clientId, strings.Split(accounts[0], ":")[1]),
 		tea.WithAltScreen(),
 		tea.WithMouseCellMotion())
 
