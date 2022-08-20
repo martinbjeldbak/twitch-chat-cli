@@ -2,7 +2,6 @@ package commands
 
 import (
 	"bufio"
-	"embed"
 	"fmt"
 	"log"
 	"math/rand"
@@ -11,18 +10,13 @@ import (
 	"os"
 	"time"
 
+	embedded "github.com/martinbjeldbak/twitch-chat-cli/embed"
 	"github.com/spf13/cobra"
 )
 
 func init() {
 	rootCmd.AddCommand(authCmd)
 }
-
-// Source: https://github.com/golang/go/issues/46056#issuecomment-938251415
-//
-//go:generate cp -r ../static .
-//go:embed static
-var content embed.FS
 
 var authCmd = &cobra.Command{
 	Use:   "auth",
@@ -51,7 +45,7 @@ var authCmd = &cobra.Command{
 
 		go func() {
 			http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
-				file, err := content.ReadFile("static/callback.html")
+				file, err := embedded.Content.ReadFile("static/callback.html")
 
 				if err != nil {
 					fmt.Printf("%s not found: %v\n", "", err)
