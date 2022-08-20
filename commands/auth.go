@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -44,7 +46,18 @@ var authCmd = &cobra.Command{
 
 		go func() {
 			http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
-				http.ServeFile(w, r, "./static/index.html")
+				filePath := filepath.Join("static", fmt.Sprintf("%v.html", r.URL.Path))
+				file, err := os.Open(filePath)
+				if err != nil {
+					fmt.Printf("%s not found: %v\n", filePath, err)
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+				defer file.Close()
+
+				_, filename := path.Split(filePath)
+
+				http.ServeContent(w, r, filename, time.Time{}, file)
 			})
 
 			if err := http.ListenAndServe(":8090", nil); err != nil {
