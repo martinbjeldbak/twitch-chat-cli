@@ -29,7 +29,7 @@ Below is an example run, where all arguments are passed in via flags
 
 ```sh
 $ twitch-chat-cli auth # get the arguments passed in to --accounts
-$ twitch-chat-cli --channels "blastpremier,jakenbakelive" --accounts "username=qcx;user_id=1234;client_id=123;oauth_token;456"
+$ twitch-chat-cli --channels "blastpremier,jakenbakelive" --accounts "username=qcx;user_id=1234;client_id=123;oauth_token=456"
 ```
 
 This tool is completely self-sufficient and does not rely on any other services than the Twitch.tv APIs.
