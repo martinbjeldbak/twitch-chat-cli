@@ -33,16 +33,16 @@ var authCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
+		localCallbackPort := "8090"
+
 		q := u.Query()
 		q.Set("response_type", "token id_token")
 		q.Set("client_id", clientId)
-		q.Set("redirect_uri", "http://localhost:8090/callback")
+		q.Set("redirect_uri", fmt.Sprintf("http://localhost:%v/callback", localCallbackPort))
 		q.Set("scope", "openid chat:read chat:edit whispers:read whispers:edit")
 		q.Set("nonce", fmt.Sprint(nonce))
 		q.Set("state", fmt.Sprint(state))
 		u.RawQuery = q.Encode()
-
-		fmt.Println(u.String())
 
 		go func() {
 			http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
@@ -60,12 +60,16 @@ var authCmd = &cobra.Command{
 				http.ServeContent(w, r, filename, time.Time{}, file)
 			})
 
-			if err := http.ListenAndServe(":8090", nil); err != nil {
+			if err := http.ListenAndServe(fmt.Sprintf(":%v", localCallbackPort), nil); err != nil {
 				log.Fatal(err)
 			}
 		}()
 
-		fmt.Print("Local HTTP server started at localhost:8090/callback.\nPress Ctrl+C when access token copied from above URL")
+		fmt.Println(u.String())
+		fmt.Printf("\nClick on the above link to authenticate with Twitch.tv. This happens safely client side.\n")
+		fmt.Print("Press Ctrl+C when access token copied from above URL")
+
+		// Pause for user input
 		input := bufio.NewScanner(os.Stdin)
 		input.Scan()
 	},
