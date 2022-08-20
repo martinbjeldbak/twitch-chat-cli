@@ -85,7 +85,6 @@ type accountInfos []twitchAccount
 type model struct {
 	currChannel  int
 	channels     twitchChannelInfos
-	currAccount  int
 	accounts     accountInfos
 	client       *twitch.Client
 	helixClient  *helix.Client
