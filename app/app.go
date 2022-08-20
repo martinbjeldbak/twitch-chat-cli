@@ -338,11 +338,11 @@ func (m model) View() string {
 	return fmt.Sprintf("%s\n%s", wordwrap.String(m.viewport.View(), m.viewport.Width), m.footerView())
 }
 
-func initialModel(sugar *zap.SugaredLogger, encodedAccountsInfo []string, initChannels []string, clientId string) (model, error) {
+func initialModel(sugar *zap.SugaredLogger, encodedAccountsInfo []string, initChannels []string) (model, error) {
 	var client *twitch.Client
 
 	as := make(accountInfos, 0, len(encodedAccountsInfo)) // +1 for anon account
-	//as = append(as, twitchAccount{Username: "anonymous"})
+	//as = append(as, twitchAccount{Username: "anonymous"}) // TODO: we shouldn't connect to helix for extra infos for anon
 
 	for _, kvs := range encodedAccountsInfo {
 		var a twitchAccount
@@ -354,8 +354,6 @@ func initialModel(sugar *zap.SugaredLogger, encodedAccountsInfo []string, initCh
 
 		as = append(as, a)
 	}
-
-	sugar.Infof("AS:\n%v", as)
 
 	client = twitch.NewClient(as[0].Username, fmt.Sprintf("oauth:%v", as[0].AccessToken))
 
@@ -428,7 +426,7 @@ func safeSync(logger *zap.Logger, err *error) {
 	}
 }
 
-func Start(channels []string, loglevel int, accounts []string, clientId string, appAccessToken string) error {
+func Start(channels []string, loglevel int, accounts []string) error {
 	cfg := zap.NewDevelopmentConfig()
 	cfg.OutputPaths = []string{
 		"log.log",
@@ -447,7 +445,7 @@ func Start(channels []string, loglevel int, accounts []string, clientId string, 
 	if len(channels) == 0 {
 		return errors.New("unable to load any channels, check config")
 	}
-	initModel, err := initialModel(sugar, accounts, channels, clientId)
+	initModel, err := initialModel(sugar, accounts, channels)
 	if err != nil {
 		return err
 	}

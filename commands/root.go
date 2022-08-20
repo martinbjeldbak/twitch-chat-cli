@@ -23,7 +23,7 @@ Supports connecting anonymously or as an authenticated user.
 This application pairs nicely with Streamlink <https://streamlink.github.io/> for
 a complete website-free viewing experience!`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return app.Start(viper.GetStringSlice("channels"), viper.GetInt("loglevel"), viper.GetStringSlice("accounts"), viper.GetString("clientId"), viper.GetString("appAccessToken"))
+		return app.Start(viper.GetStringSlice("channels"), viper.GetInt("loglevel"), viper.GetStringSlice("accounts"))
 	},
 }
 
@@ -47,10 +47,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.twitch-chat-cli.yaml)")
 	rootCmd.PersistentFlags().StringSlice("accounts", nil, "accounts and their oauth tokens to use, for example \"hasanabi:secret,jakenbakelive:secret\" (NOTE: currently only support for a single account)")
 	rootCmd.PersistentFlags().StringSlice("channels", []string{"pokimane"}, "channels to join")
-	rootCmd.PersistentFlags().String("clientId", "j1i10vfts1iy5p43v8pipr6brg2u3q", "The Twitch application client ID")
-	rootCmd.PersistentFlags().String("appAccessToken", "secret", "Access token fetched from calling 'auth' command")
 
-	for _, key := range []string{"accounts", "channels", "clientId", "appAccessToken"} {
+	for _, key := range []string{"accounts", "channels"} {
 		err := viper.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key))
 		if err != nil {
 			fmt.Printf("Error binding pflag '%v': %v", key, err)
