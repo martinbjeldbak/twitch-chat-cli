@@ -1,8 +1,6 @@
 # Twitch Chat CLI
 [Twitch.tv](https://twitch.tv) chat client in your terminal
 
-TODO: Add latest erlease here
-
 ## Demo
 
 ## Features
@@ -27,11 +25,12 @@ Built With
 
 
 ## TODO
+- [ ] Open streamlink for current channel
 - [ ] Add multiuser support
 - [x] Tab for each chat/channel
 - [x] Scrolling chat window
 - [ ] Remove older messages
-- [x] OIDC Authorization code grant flow Authentication (https://dev.twitch.tv/docs/authentication/getting-tokens-oidc). Doing this currently via OIDC Implicit grant flow which requires copy/pasting. Not ideal
+- [ ] OIDC Authorization code grant flow Authentication (https://dev.twitch.tv/docs/authentication/getting-tokens-oidc). Doing this currently via OIDC Implicit grant flow which requires copy/pasting. Not ideal
   - Consider via oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
 - [x] Enter chat msg
 - [ ] Vim-modes for navigation
