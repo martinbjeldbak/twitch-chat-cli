@@ -30,7 +30,7 @@ type user struct {
 	Name        string
 	DisplayName string
 	Color       string
-	Badges      map[string]int // TODO: consider model for this
+	Badges      map[string]int
 }
 
 type twitchMessage struct {
