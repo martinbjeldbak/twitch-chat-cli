@@ -37,6 +37,16 @@ jobs:
           version: latest
           args: check
 
+  dockerfile-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - uses: hadolint/hadolint-action@v2
+        with:
+          dockerfile: Dockerfile
+
   test-unix:
     strategy:
       fail-fast: false
