@@ -22,6 +22,19 @@ This CLI can be started without any arguments and will launch in anonymous mode,
 
 If you wish to chat, you must auth first with the `auth` command and add the credentials to the `--accounts` flag or the config file.
 
+
+### Docker
+
+You can also run this CLI through Docker. If you wish to authenticate with your user, you will need to expose port `8090` to your host so that you can run the local authentication server to receive your OAuth tokens from Twitch.
+
+```sh
+$ docker run -it -p 8090:8090 ghcr.io/martinbjeldbak/twitch-chat-cli --channels "ThePrimeagen"
+```
+
+If you don't care about authenticating, you can remove the `-p` flag.
+
+Note that arm is not currently supported. Will need to add this through GoReleaser `docker_manifests` support.
+
 ### Example
 
 Below is an example run, where all arguments are passed in via flags

@@ -18,7 +18,7 @@ FROM gcr.io/distroless/static-debian11
 
 COPY --from=build /go/bin/twitch-chat-cli /
 
-# To run a local server receiving the OAuth token from Twitch.tv
+# Optional: Run a local HTTP server to receive OAuth token from Twitch.tv (using the `auth` command)
 EXPOSE 8090
 
 ENTRYPOINT ["/twitch-chat-cli"]
