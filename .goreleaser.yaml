@@ -105,8 +105,5 @@ archives:
       - LICENSE
       - completions/*
 
-sboms:
-  - artifacts: archive
-
 release:
     draft: true
