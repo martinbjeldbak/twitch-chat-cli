@@ -425,7 +425,7 @@ func initialModel(sugar *zap.SugaredLogger, encodedAccountsInfo []string, initCh
 		ti := textinput.New()
 		ti.CharLimit = 156
 		ti.Width = 20
-		ti.Placeholder = "Authenticate to send messages"
+		ti.Placeholder = fmt.Sprintf("Authenticate to send messages in %v", c)
 
 		if initialAccount.isAuthenticated() {
 			cInfo := liveInfos.Data.Channels[i]
