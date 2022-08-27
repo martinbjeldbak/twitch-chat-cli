@@ -17,4 +17,9 @@ RUN CGO_ENABLED=0 go build -o /go/bin/twitch-chat-cli
 FROM gcr.io/distroless/static-debian11
 
 COPY --from=build /go/bin/twitch-chat-cli /
-CMD ["/twitch-chat-cli"]
+
+# To run a local server receiving the OAuth token from Twitch.tv
+EXPOSE 8090
+
+ENTRYPOINT ["/twitch-chat-cli"]
+CMD ["--help"]
