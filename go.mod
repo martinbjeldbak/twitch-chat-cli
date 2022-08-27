@@ -11,7 +11,7 @@ require (
 	github.com/nicklaw5/helix v1.25.0
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.12.0
-	go.uber.org/zap v1.22.0
+	go.uber.org/zap v1.23.0
 )
 
 require (
