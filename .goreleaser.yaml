@@ -1,7 +1,10 @@
 before:
   hooks:
     - go mod tidy
-    - go generate ./...
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
 builds:
   - env:
       - CGO_ENABLED=0
@@ -9,32 +12,100 @@ builds:
       - linux
       - windows
       - darwin
-archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+    goarch:
+      - "386"
+      - amd64
+      - arm
+      - arm64
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{ .CommitDate }} -X main.builtBy=goreleaser
+
 checksum:
   name_template: 'checksums.txt'
-snapshot:
-  name_template: "{{ incpatch .Version }}-next"
-dockers:
-  - image_templates:
-      - "martinbjeldbak/twitch-chat-cli"
-    build_flag_templates:
-      - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
+
 changelog: # docs: https://goreleaser.com/customization/changelog
   use: github
   sort: asc
   filters:
     exclude:
-      - '^docs:'
       - '^test:'
+      - '^chore'
+      - 'merge conflict'
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+      - go mod tidy
+
+dockers:
+  - image_templates:
+      - "martinbjeldbak/twitch-chat-cli:{{ .Tag }}-amd64"
+      - "ghcr.io/martinbjeldbak/twitch-chat-cli:{{ .Tag }}-amd64"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.description=Twitch chat in your terminal"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+      - "--platform=linux/amd64"
+  - image_templates:
+      - "martinbjeldbak/twitch-chat-cli:{{ .Tag }}-arm64"
+      - "ghcr.io/martinbjeldbak/twitch-chat-cli:{{ .Tag }}-arm64"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.description=Twitch chat in your terminal"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.name={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+      - "--platform=linux/arm64"
+
+docker_manifests:
+  - name_template: 'martinbjeldbak/twitch-chat-cli:{{ .Tag }}'
+    image_templates:
+      - 'martinbjeldbak/twitch-chat-cli:{{ .Tag }}-amd64'
+      - 'martinbjeldbak/twitch-chat-cli:{{ .Tag }}-arm64'
+  - name_template: 'ghcr.io/martinbjeldbak/twitch-chat-cli:{{ .Tag }}'
+    image_templates:
+      - 'ghcr.io/martinbjeldbak/twitch-chat-cli:{{ .Tag }}-amd64'
+      - 'ghcr.io/martinbjeldbak/twitch-chat-cli:{{ .Tag }}-arm64'
+  - name_template: 'martinbjeldbak/twitch-chat-cli:latest'
+    image_templates:
+      - 'martinbjeldbak/twitch-chat-cli:{{ .Tag }}-amd64'
+      - 'martinbjeldbak/twitch-chat-cli:{{ .Tag }}-arm64'
+  - name_template: 'ghcr.io/martinbjeldbak/twitch-chat-cli:latest'
+    image_templates:
+      - 'ghcr.io/martinbjeldbak/twitch-chat-cli:{{ .Tag }}-amd64'
+      - 'ghcr.io/martinbjeldbak/twitch-chat-cli:{{ .Tag }}-arm64'
+
+
+archives:
+  - name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE.md
+      - completions/*
+
+sboms:
+  - artifacts: archive
+
 release:
     draft: true
