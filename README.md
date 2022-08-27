@@ -3,6 +3,8 @@ A [Twitch.tv](https://twitch.tv) chat client in your terminal
 
 Still in early development and missing many core features
 
+## Demo
+
 <!-- DEMO CLI gif here -->
 
 ## Features
@@ -115,13 +117,6 @@ You will be asked to sign in to the Twitch account you wish to use this CLI with
 
 Once authenticated, you will be redirected to the local web server will display a web page with auth string that needs to be passed to the `--accounts` flag, or pasted into your config.
 
-## Installation
-
-TODO: add better installation instructions.
-
-Currently the binary needs to be downloaded manually from the GitHub releases page at <https://github.com/martinbjeldbak/twitch-chat-cli/releases> for the right OS and placed into the PATH or manually run.
-
-
 ## Inspiration
 - https://github.com/chatterino/chatterino2 - Chatterino
 - https://github.com/atye/ttchat, similar principle, 1 channel only and need dev account
@@ -133,8 +128,12 @@ Currently the binary needs to be downloaded manually from the GitHub releases pa
 - https://github.com/gempir/go-twitch-irc
 - https://github.com/nicklaw5/helix
 
+## Contributing
+[![.github/workflows/ci.yml](https://github.com/martinbjeldbak/twitch-chat-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/martinbjeldbak/twitch-chat-cli/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/martinbjeldbak/twitch-chat-cli/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/martinbjeldbak/twitch-chat-cli/actions/workflows/codeql-analysis.yml)
+[![release](https://github.com/martinbjeldbak/twitch-chat-cli/actions/workflows/release.yml/badge.svg)](https://github.com/martinbjeldbak/twitch-chat-cli/actions/workflows/release.yml)
 
-## TODO
+### TODO
 - [ ] Style authentication page smilar to https://chatterino.com/client_login or https://twitchapps.com/tmi/ (starts site with url first, can do this)
 - [ ] Open streamlink for current channel using bubbles keybind
 - [ ] Add multiuser support
@@ -161,6 +160,7 @@ Currently the binary needs to be downloaded manually from the GitHub releases pa
     - soon https://github.com/alacritty/alacritty/pull/4763, https://github.com/alacritty/alacritty/issues/910
   - Windows Terminal does not support emotes
 - [ ] `PM` and `WhisperMessage` support. See https://pkg.go.dev/github.com/gempir/go-twitch-irc/v3@v3.0.0#readme-available-data
+- [ ] Add `--debug` command to increase logging
 - [ ] Goreleaser: release to package managers scoop/apt/etc.
 
 
