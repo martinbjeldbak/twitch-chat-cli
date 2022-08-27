@@ -101,7 +101,7 @@ archives:
         format: zip
     files:
       - README.md
-      - LICENSE.md
+      - LICENSE
       - completions/*
 
 sboms:
