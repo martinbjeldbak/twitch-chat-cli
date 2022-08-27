@@ -9,8 +9,12 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+      timezone: "Australia/Melbourne"
+    assignee: martinbjeldbak
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
+      timezone: "Australia/Melbourne"
+    assignee: martinbjeldbak
