@@ -22,7 +22,9 @@ snapshot:
   name_template: "{{ incpatch .Version }}-next"
 dockers:
   - image_templates:
-      - martinbjeldbak/twitch-chat-cli
+      - "martinbjeldbak/twitch-chat-cli:latest"
+      - "martinbjeldbak/twitch-chat-cli:{{ .Tag }}"
+      - "martinbjeldbak/twitch-chat-cli:v{{ .Major }}"
     build_flag_templates:
       - "--pull"
       - "--label=org.opencontainers.image.created={{.Date}}"
