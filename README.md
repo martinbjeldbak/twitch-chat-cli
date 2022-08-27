@@ -16,28 +16,29 @@ Built With
 - Go
 - [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea)
 
+## Installation
+
+Binaries for most platforms can be downloaded from this project's GitHub [release page](https://github.com/martinbjeldbak/twitch-chat-cli/releases)
+
+Docker images are also built and deployed. See the [Docker](#docker) section below on how to run it.
+
 ## How to use
 
 This CLI can be started without any arguments and will launch in anonymous mode, meaning you won't be able to chat.
 
 If you wish to chat, you must auth first with the `auth` command and add the credentials to the `--accounts` flag or the config file.
 
+### Unauthenticated Example
 
-### Docker
-
-You can also run this CLI through Docker. If you wish to authenticate with your user, you will need to expose port `8090` to your host so that you can run the local authentication server to receive your OAuth tokens from Twitch.
+You can connect to one or multiple channels using the `--channels` flag
 
 ```sh
-$ docker run -it -p 8090:8090 ghcr.io/martinbjeldbak/twitch-chat-cli --channels "ThePrimeagen"
+$ twitch-chat-cli --channels "ThePrimeagen,blastpremier"
 ```
 
-If you don't care about authenticating, you can remove the `-p` flag.
+### Authenticated Example
 
-Note that arm is not currently supported. Will need to add this through GoReleaser `docker_manifests` support.
-
-### Example
-
-Below is an example run, where all arguments are passed in via flags
+Below is an example sequence of commands to authenticte and connect to some channels, where all arguments are passed in via flags
 
 ```sh
 $ twitch-chat-cli auth # get the arguments passed in to --accounts
@@ -46,7 +47,30 @@ $ twitch-chat-cli --channels "blastpremier,jakenbakelive" --accounts "username=q
 
 This tool is completely self-sufficient and does not rely on any other services than the Twitch.tv APIs.
 
-A help menu can be found by calling `--help`
+A help menu can be found using the `--help` flag.
+
+### Docker
+
+You can also run this CLI through Docker. If you wish to authenticate with your user, you will need to expose port `8090` to your host so that you can run the local authentication server to receive your OAuth tokens from Twitch.
+
+#### Anonymous / Unauthenticated
+
+Simply run the docker image
+
+```sh
+$ docker run -it ghcr.io/martinbjeldbak/twitch-chat-cli --channels "ThePrimeagen"
+```
+
+#### Authenticated
+
+To authenticate with Twitch and be able to write in chat, follow the below commands. Authentication happens client-side, and your username and password are only ever entered on Twitch.tv.
+
+The first command will prompt you to authenticate with Twitch, and will then present you with an OAuth string at `http://localhost:8090` which needs to be set in the `--accounts` flag. See below for example:
+
+```sh
+$ docker run -it -p 8090:8090 ghcr.io/martinbjeldbak/twitch-chat-cli auth
+$ docker run -it ghcr.io/martinbjeldbak/twitch-chat-cli --channels "ThePrimeagen" --accounts "PASTE HERE"
+```
 
 
 ### Help
@@ -120,9 +144,9 @@ Currently the binary needs to be downloaded manually from the GitHub releases pa
   - Consider via oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
 - [x] Enter chat msg
 - [ ] Vim-modes for navigation
-- [ ] Idea: Start in lurker mode. No chat input, just focus on seeing
+- [x] Idea: Start in lurker mode. No chat input, just focus on seeing
 - [x] Goreleaser https://goreleaser.com/intro/
-- [ ] Goreleaser: release docker image (have Dockerfile already, but first fix it up with `distroless`)
+- [x] Goreleaser: release docker image (have Dockerfile already, but first fix it up with `distroless`)
 - [ ] Animated emotes (image/gif?)
 - [ ] Add to lists
   - https://github.com/charmbracelet/bubbletea#bubble-tea-in-the-wild
@@ -137,6 +161,7 @@ Currently the binary needs to be downloaded manually from the GitHub releases pa
     - soon https://github.com/alacritty/alacritty/pull/4763, https://github.com/alacritty/alacritty/issues/910
   - Windows Terminal does not support emotes
 - [ ] `PM` and `WhisperMessage` support. See https://pkg.go.dev/github.com/gempir/go-twitch-irc/v3@v3.0.0#readme-available-data
+- [ ] Goreleaser: release to package managers scoop/apt/etc.
 
 
 ## License
