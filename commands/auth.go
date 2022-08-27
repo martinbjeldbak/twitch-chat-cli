@@ -52,7 +52,12 @@ var authCmd = &cobra.Command{
 					w.WriteHeader(http.StatusNotFound)
 					return
 				}
-				w.Write(file)
+				_, err = w.Write(file)
+				if err != nil {
+					fmt.Printf("Error writing to response: %v", err)
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
 			})
 
 			if err := http.ListenAndServe(fmt.Sprintf(":%v", localCallbackPort), nil); err != nil {
