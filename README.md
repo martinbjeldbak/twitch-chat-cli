@@ -10,12 +10,11 @@ Still in early development and missing many core features
 - Connect to multiple Twitch channels
 - Chat in multiple Twitch channels (requires authentication)
 
-
 Goal is to be simmiler to [Chatterino](https://chatterino.com/), but in the CLI
 
 Built With
 - Go
-- bubbletea
+- [charmbracelet/bubbletea](https://github.com/charmbracelet/bubbletea)
 
 ## How to use
 

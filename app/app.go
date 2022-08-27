@@ -39,12 +39,10 @@ type twitchMessage struct {
 }
 
 type twitchChannel struct {
-	name               string
-	messageChannel     chan twitchMessage // where we will get messages
-	messagesToRender   []twitchMessage
-	textInput          textinput.Model
-	userDetails        helix.User
-	channelInformation helix.ChannelInformation
+	name             string
+	messageChannel   chan twitchMessage // where we will get messages
+	messagesToRender []twitchMessage
+	textInput        textinput.Model
 }
 
 type twitchAccount struct {
@@ -52,6 +50,14 @@ type twitchAccount struct {
 	UserId      int
 	ClientId    string
 	AccessToken string
+}
+
+func (a twitchAccount) isAnonymous() bool {
+	return a.Username == "" || a.ClientId == "" || a.AccessToken == ""
+}
+
+func (a twitchAccount) isAuthenticated() bool {
+	return !a.isAnonymous()
 }
 
 func (a *twitchAccount) UnmarshalString(encodedKvs string) error {
@@ -337,11 +343,52 @@ func (m model) View() string {
 	return fmt.Sprintf("%s\n%s", wordwrap.String(m.viewport.View(), m.viewport.Width), m.footerView())
 }
 
-func initialModel(sugar *zap.SugaredLogger, encodedAccountsInfo []string, initChannels []string) (model, error) {
-	var client *twitch.Client
+func setupTwitchApiClient(u twitchAccount) (*helix.Client, error) {
+	hclient, err := helix.NewClient(&helix.Options{
+		ClientID:       u.ClientId,
+		AppAccessToken: u.AccessToken,
+	})
+	if err != nil {
+		return nil, err
+	}
 
-	as := make(accountInfos, 0, len(encodedAccountsInfo)) // +1 for anon account
-	//as = append(as, twitchAccount{Username: "anonymous"}) // TODO: we shouldn't connect to helix for extra infos for anon
+	return hclient, err
+}
+
+func getChannelInformation(authedClient *helix.Client, channelNames []string) (*helix.GetChannelInformationResponse, error) {
+	usersResp, err := authedClient.GetUsers(&helix.UsersParams{Logins: channelNames})
+	if err != nil {
+		return nil, err
+	}
+	if usersResp.Error != "" {
+		return nil, fmt.Errorf("error requesting channels: %v", usersResp.Error)
+	}
+
+	ids := make([]string, len(usersResp.Data.Users))
+	for i, u := range usersResp.Data.Users {
+		ids[i] = u.ID
+	}
+
+	liveInfos, err := authedClient.GetChannelInformation(&helix.GetChannelInformationParams{
+		BroadcasterIDs: ids,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if liveInfos.Error != "" {
+		return nil, fmt.Errorf("error requesting channels: %v", usersResp.Error)
+	}
+
+	return liveInfos, nil
+}
+
+func initialModel(sugar *zap.SugaredLogger, encodedAccountsInfo []string, initChannels []string) (model, error) {
+	var ircClient *twitch.Client
+	var liveInfos *helix.GetChannelInformationResponse
+	var twitchClient *helix.Client
+
+	as := make(accountInfos, 0, len(encodedAccountsInfo)+1) // +1 for anon account
+	as = append(as, twitchAccount{Username: "anonymous"})   // TODO: we shouldn't connect to helix for extra infos for anon
 
 	for _, kvs := range encodedAccountsInfo {
 		var a twitchAccount
@@ -354,57 +401,43 @@ func initialModel(sugar *zap.SugaredLogger, encodedAccountsInfo []string, initCh
 		as = append(as, a)
 	}
 
-	client = twitch.NewClient(as[0].Username, fmt.Sprintf("oauth:%v", as[0].AccessToken))
+	initialAccount := as[len(as)-1]
 
-	hclient, err := helix.NewClient(&helix.Options{
-		ClientID:       as[0].ClientId,
-		AppAccessToken: as[0].AccessToken,
-	})
-	if err != nil {
-		return model{}, err
-	}
+	if initialAccount.isAnonymous() {
+		ircClient = twitch.NewAnonymousClient()
+	} else {
+		ircClient = twitch.NewClient(initialAccount.Username, fmt.Sprintf("oauth:%v", initialAccount.AccessToken))
+		twitchClient, err := setupTwitchApiClient(initialAccount)
+		if err != nil {
+			return model{}, err
+		}
 
-	usersResp, err := hclient.GetUsers(&helix.UsersParams{
-		Logins: initChannels,
-	})
-	if err != nil {
-		return model{}, err
-	}
-	if usersResp.Error != "" {
-		return model{}, fmt.Errorf("error requesting channels: %v", usersResp.Error)
-	}
-
-	ids := make([]string, len(usersResp.Data.Users))
-	for i, u := range usersResp.Data.Users {
-		ids[i] = u.ID
-	}
-
-	liveInfos, err := hclient.GetChannelInformation(&helix.GetChannelInformationParams{
-		BroadcasterIDs: ids,
-	})
-	if err != nil {
-		return model{}, err
-	}
-	if liveInfos.Error != "" {
-		return model{}, fmt.Errorf("error requesting channels: %v", usersResp.Error)
+		liveInfos, err = getChannelInformation(twitchClient, initChannels)
+		if err != nil {
+			return model{}, err
+		}
 	}
 
 	channelInfo := make(twitchChannelInfos, len(initChannels))
 	for i, c := range initChannels {
-		cInfo := liveInfos.Data.Channels[i]
-		ti := textinput.New()
+		gameName := ""
 
-		ti.Placeholder = fmt.Sprintf("Send a message in %v (streaming %v) as %v", c, cInfo.GameName, as[0].Username)
-		ti.Focus()
+		ti := textinput.New()
 		ti.CharLimit = 156
 		ti.Width = 20
+		ti.Placeholder = "Authenticate to send messages"
+
+		if initialAccount.isAuthenticated() {
+			cInfo := liveInfos.Data.Channels[i]
+			gameName = fmt.Sprintf("(streaming %v)", cInfo.GameName)
+			ti.Placeholder = fmt.Sprintf("Send a message in %v %v as %v", c, gameName, initialAccount.Username)
+			ti.Focus()
+		}
 
 		channelInfo[i] = &twitchChannel{
-			name:               c,
-			messageChannel:     make(chan twitchMessage),
-			textInput:          ti,
-			userDetails:        usersResp.Data.Users[i],
-			channelInformation: cInfo,
+			name:           c,
+			messageChannel: make(chan twitchMessage),
+			textInput:      ti,
 		}
 	}
 
@@ -412,8 +445,8 @@ func initialModel(sugar *zap.SugaredLogger, encodedAccountsInfo []string, initCh
 		currChannel:  0,
 		channels:     channelInfo,
 		logger:       sugar,
-		client:       client,
-		helixClient:  hclient,
+		client:       ircClient,
+		helixClient:  twitchClient,
 		messageStyle: make(map[string]lipgloss.Style),
 		accounts:     as,
 	}, nil
