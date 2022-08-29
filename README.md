@@ -5,7 +5,7 @@ Still in early development and missing many core features
 
 ## Demo
 
-<!-- DEMO CLI gif here -->
+[![asciicast](https://asciinema.org/a/J5VANcJt9PGzMPIbmm9z5Y6Z5.svg)](https://asciinema.org/a/J5VANcJt9PGzMPIbmm9z5Y6Z5)
 
 ## Features
 
