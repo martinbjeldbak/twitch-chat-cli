@@ -23,7 +23,7 @@ var authCmd = &cobra.Command{
 	Short: "Authenticate with Twitch",
 	Long:  "Authenticate with Twitch using OIDC implicit grant flow via local server",
 	Run: func(cmd *cobra.Command, args []string) {
-		clientId := "j1i10vfts1iy5p43v8pipr6brg2u3q"
+		clientID := "j1i10vfts1iy5p43v8pipr6brg2u3q"
 		rand.Seed(time.Now().UnixNano())
 		nonce := rand.Int()
 		state := rand.Int()
@@ -36,7 +36,7 @@ var authCmd = &cobra.Command{
 
 		q := u.Query()
 		q.Set("response_type", "token id_token")
-		q.Set("client_id", clientId)
+		q.Set("client_id", clientID)
 		q.Set("redirect_uri", fmt.Sprintf("http://localhost:%v/callback", localCallbackPort))
 		q.Set("scope", "openid chat:read chat:edit whispers:read whispers:edit")
 		q.Set("nonce", fmt.Sprint(nonce))
