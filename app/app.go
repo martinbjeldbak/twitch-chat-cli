@@ -85,8 +85,10 @@ func (a *twitchAccount) UnmarshalString(encodedKvs string) error {
 	return nil
 }
 
-type twitchChannelInfos []*twitchChannel
-type accountInfos []twitchAccount
+type (
+	twitchChannelInfos []*twitchChannel
+	accountInfos       []twitchAccount
+)
 
 type model struct {
 	currChannel  int

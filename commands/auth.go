@@ -46,7 +46,6 @@ var authCmd = &cobra.Command{
 		go func() {
 			http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 				file, err := embedded.Content.ReadFile("static/callback.html")
-
 				if err != nil {
 					fmt.Printf("%s not found: %v\n", "", err)
 					w.WriteHeader(http.StatusNotFound)
