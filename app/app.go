@@ -151,7 +151,7 @@ func waitForMessage(c *twitchChannel) tea.Cmd {
 	}
 }
 
-func handleChatMessage(client *twitch.Client, ci twitchChannelInfos) func(m twitch.PrivateMessage) {
+func handleChatMessage(ci twitchChannelInfos) func(m twitch.PrivateMessage) {
 	return func(m twitch.PrivateMessage) {
 		channel, ok := channelByName(m.Channel, ci)
 
@@ -173,7 +173,7 @@ func handleChatMessage(client *twitch.Client, ci twitchChannelInfos) func(m twit
 
 func connectTwitch(client *twitch.Client, ci twitchChannelInfos) tea.Cmd {
 	return func() tea.Msg {
-		client.OnPrivateMessage(handleChatMessage(client, ci))
+		client.OnPrivateMessage(handleChatMessage(ci))
 
 		channelNames := make([]string, 0, len(ci))
 		for _, k := range ci {
