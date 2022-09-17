@@ -47,13 +47,13 @@ type twitchChannel struct {
 
 type twitchAccount struct {
 	Username    string
-	UserId      int
-	ClientId    string
+	UserID      int
+	ClientID    string
 	AccessToken string
 }
 
 func (a twitchAccount) isAnonymous() bool {
-	return a.Username == "" || a.ClientId == "" || a.AccessToken == ""
+	return a.Username == "" || a.ClientID == "" || a.AccessToken == ""
 }
 
 func (a twitchAccount) isAuthenticated() bool {
@@ -70,14 +70,14 @@ func (a *twitchAccount) UnmarshalString(encodedKvs string) error {
 		case "username":
 			a.Username = entry[1]
 		case "user_id":
-			userId, err := strconv.Atoi(entry[1])
+			userID, err := strconv.Atoi(entry[1])
 			if err != nil {
 				return err
 			}
 
-			a.UserId = userId
+			a.UserID = userID
 		case "client_id":
-			a.ClientId = entry[1]
+			a.ClientID = entry[1]
 		case "oauth_token":
 			a.AccessToken = entry[1]
 		}
@@ -345,9 +345,9 @@ func (m model) View() string {
 	return fmt.Sprintf("%s\n%s", wordwrap.String(m.viewport.View(), m.viewport.Width), m.footerView())
 }
 
-func setupTwitchApiClient(u twitchAccount) (*helix.Client, error) {
+func setupTwitchAPIClient(u twitchAccount) (*helix.Client, error) {
 	hclient, err := helix.NewClient(&helix.Options{
-		ClientID:       u.ClientId,
+		ClientID:       u.ClientID,
 		AppAccessToken: u.AccessToken,
 	})
 	if err != nil {
@@ -409,7 +409,7 @@ func initialModel(sugar *zap.SugaredLogger, encodedAccountsInfo []string, initCh
 		ircClient = twitch.NewAnonymousClient()
 	} else {
 		ircClient = twitch.NewClient(initialAccount.Username, fmt.Sprintf("oauth:%v", initialAccount.AccessToken))
-		twitchClient, err := setupTwitchApiClient(initialAccount)
+		twitchClient, err := setupTwitchAPIClient(initialAccount)
 		if err != nil {
 			return model{}, err
 		}

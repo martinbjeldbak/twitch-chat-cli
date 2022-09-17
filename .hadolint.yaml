@@ -1,0 +1,2 @@
+ignored:
+  - DL3007 # static-debian11 already tagged https://github.com/hadolint/hadolint/wiki/DL3007
