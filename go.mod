@@ -9,7 +9,7 @@ require (
 	github.com/gempir/go-twitch-irc/v3 v3.2.0
 	github.com/muesli/reflow v0.3.0
 	github.com/nicklaw5/helix v1.25.0
-	github.com/spf13/cobra v1.5.0
+	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.13.0
 	go.uber.org/zap v1.23.0
 )
