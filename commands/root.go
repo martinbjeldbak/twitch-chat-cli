@@ -7,6 +7,7 @@ import (
 	"github.com/martinbjeldbak/twitch-chat-cli/app"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 var cfgFile string
@@ -47,6 +48,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.twitch-chat-cli.yaml)")
 	rootCmd.PersistentFlags().StringSlice("accounts", nil, "accounts and their oauth tokens to use, for example see example.yaml. Fetched via the `auth` command")
 	rootCmd.PersistentFlags().StringSlice("channels", []string{"pokimane"}, "channels to join")
+	rootCmd.PersistentFlags().Int("loglevel", int(zap.ErrorLevel), "log level in logfile, see https://pkg.go.dev/go.uber.org/zap/zapcore#Level")
 
 	for _, key := range []string{"accounts", "channels"} {
 		err := viper.BindPFlag(key, rootCmd.PersistentFlags().Lookup(key))

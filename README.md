@@ -135,12 +135,11 @@ Once authenticated, you will be redirected to the local web server will display 
 
 ### TODO
 - [ ] Style authentication page smilar to https://chatterino.com/client_login or https://twitchapps.com/tmi/ (starts site with url first, can do this)
-- [ ] Open streamlink for current channel using bubbles keybind
+- [ ] Open streamlink for current channel using bubbles/vim keybind
 - [ ] Add multiuser support
 - [x] Tab for each chat/channel
 - [x] Scrolling chat window
 - [ ] Remove older messages (performance improvement. do if needed)
-  - Consider via oauth2 pkg https://pkg.go.dev/golang.org/x/oauth2#AuthStyle, https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#implicit-grant-flow
 - [x] Enter chat msg
 - [ ] Vim-modes for navigation
 - [x] Idea: Start in lurker mode. No chat input, just focus on seeing
@@ -162,6 +161,7 @@ Once authenticated, you will be redirected to the local web server will display 
 - [ ] `PM` and `WhisperMessage` support. See https://pkg.go.dev/github.com/gempir/go-twitch-irc/v3@v3.0.0#readme-available-data
 - [ ] Add `--debug` command to increase logging
 - [ ] Goreleaser: release to package managers scoop/apt/etc.
+- [ ] Record gif intro with https://github.com/charmbracelet/vhs. Better when we have emotes
 
 
 ## License

@@ -1,8 +1,14 @@
 package app
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -12,6 +18,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/gempir/go-twitch-irc/v3"
+	"github.com/mattn/go-sixel"
 	"github.com/muesli/reflow/wordwrap"
 	"github.com/nicklaw5/helix"
 	"go.uber.org/zap"
@@ -113,7 +120,7 @@ func (m model) Init() tea.Cmd {
 	var initCmds []tea.Cmd
 
 	// Connect to desired twitch channels
-	initCmds = append(initCmds, connectTwitch(m.client, m.channels))
+	initCmds = append(initCmds, connectTwitch(m.client, m.channels, m.logger))
 
 	// Emit Tea messages for each new Twitch message
 	for _, channel := range m.channels {
@@ -151,7 +158,13 @@ func waitForMessage(c *twitchChannel) tea.Cmd {
 	}
 }
 
-func handleChatMessage(ci twitchChannelInfos) func(m twitch.PrivateMessage) {
+const cdnFmtString = "https://static-cdn.jtvnw.net/emoticons/v2/%v/%v/%v/%v"
+
+func emoteUrl(id string) string {
+	return fmt.Sprintf(cdnFmtString, id, "static", "dark", "1.0")
+}
+
+func handleChatMessage(ci twitchChannelInfos, l *zap.SugaredLogger) func(m twitch.PrivateMessage) {
 	return func(m twitch.PrivateMessage) {
 		channel, ok := channelByName(m.Channel, ci)
 
@@ -159,8 +172,37 @@ func handleChatMessage(ci twitchChannelInfos) func(m twitch.PrivateMessage) {
 			fmt.Printf("TODO: Got message for unknown channel, need to handle (create a new channel and insert in channel slice)")
 			os.Exit(1)
 		}
+
+		msg := m.Message
+
+		for i, emote := range m.Emotes {
+			emoteUrl := emoteUrl(emote.ID)
+			resp, err := http.Get(emoteUrl)
+			if err != nil {
+				l.Fatal(err)
+			}
+
+			img, _, err := image.Decode(resp.Body)
+			if err != nil {
+				l.Fatalf("%v, Unable to decode %v ", err, emoteUrl)
+			}
+
+			buf := bytes.NewBufferString("")
+			enc := sixel.NewEncoder(buf)
+			enc.Dither = true
+			err = enc.Encode(img)
+			if err != nil {
+				l.Fatal(err)
+			}
+			// msg += " emote: "
+			// msg += buf.String()
+
+			msg = strings.ReplaceAll(msg, emote.Name, buf.String())
+			msg += fmt.Sprintf(" (#%v: %v -> %v)\n", i+1, emote.Name, buf.String())
+		}
+
 		channel.messageChannel <- twitchMessage{
-			message: m.Message,
+			message: msg,
 			user: user{
 				Name:        m.User.Name,
 				DisplayName: m.User.DisplayName,
@@ -171,9 +213,9 @@ func handleChatMessage(ci twitchChannelInfos) func(m twitch.PrivateMessage) {
 	}
 }
 
-func connectTwitch(client *twitch.Client, ci twitchChannelInfos) tea.Cmd {
+func connectTwitch(client *twitch.Client, ci twitchChannelInfos, l *zap.SugaredLogger) tea.Cmd {
 	return func() tea.Msg {
-		client.OnPrivateMessage(handleChatMessage(ci))
+		client.OnPrivateMessage(handleChatMessage(ci, l))
 
 		channelNames := make([]string, 0, len(ci))
 		for _, k := range ci {
