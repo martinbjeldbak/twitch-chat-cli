@@ -6,7 +6,7 @@ require (
 	github.com/charmbracelet/bubbles v0.14.0
 	github.com/charmbracelet/bubbletea v0.22.1
 	github.com/charmbracelet/lipgloss v0.6.0
-	github.com/gempir/go-twitch-irc/v3 v3.2.0
+	github.com/gempir/go-twitch-irc/v3 v3.3.0
 	github.com/muesli/reflow v0.3.0
 	github.com/nicklaw5/helix v1.25.0
 	github.com/spf13/cobra v1.6.1
