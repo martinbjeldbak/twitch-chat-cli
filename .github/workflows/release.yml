@@ -44,7 +44,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Setup Syft to create SBOM
-        uses:  anchore/sbom-action/download-syft@v0.13.1
+        uses:  anchore/sbom-action/download-syft@v0.14.1
 
       - name: Run GoReleaser check
         uses: goreleaser/goreleaser-action@v3
